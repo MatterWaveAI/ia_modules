@@ -1,0 +1,88 @@
+{
+    "name": "Simple HITL Getting Started",
+    "description": "Simple 3-step pipeline demonstrating human-in-the-loop pause and resume",
+    "version": "1.0.0",
+    "parameters": [],
+    "steps": [
+        {
+            "id": "step1_prepare",
+            "name": "Prepare Data",
+            "step_class": "PrepareDataStep",
+            "module": "tests.pipelines.simple_hitl_pipeline.steps.simple_hitl_steps",
+            "config": {
+                "message": "Preparing data for review"
+            },
+            "inputs": [],
+            "outputs": [
+                {"name": "prepared_data", "required": true},
+                {"name": "status", "required": true},
+                {"name": "message", "required": true}
+            ]
+        },
+        {
+            "id": "step2_human_review",
+            "name": "Human Review",
+            "step_class": "SimpleHumanReviewStep",
+            "module": "tests.pipelines.simple_hitl_pipeline.steps.simple_hitl_steps",
+            "config": {
+                "timeout_seconds": 300,
+                "prompt": "Please review the prepared data and approve or reject",
+                "channels": ["web", "email", "slack"],
+                "assigned_users": ["manager@company.com", "reviewer@company.com"]
+            },
+            "inputs": [
+                {"name": "prepared_data", "source": "{steps.step1_prepare.output.prepared_data}", "required": true}
+            ],
+            "outputs": [
+                {"name": "status", "required": true},
+                {"name": "prompt", "required": true},
+                {"name": "ui_schema", "required": true},
+                {"name": "timeout_seconds", "required": true},
+                {"name": "channels", "required": true},
+                {"name": "assigned_users", "required": false},
+                {"name": "prepared_data", "required": true},
+                {"name": "human_decision", "required": false},
+                {"name": "human_comments", "required": false}
+            ]
+        },
+        {
+            "id": "step3_finalize",
+            "name": "Finalize",
+            "step_class": "FinalizeStep",
+            "module": "tests.pipelines.simple_hitl_pipeline.steps.simple_hitl_steps",
+            "config": {
+                "message": "Finalizing based on human decision"
+            },
+            "inputs": [
+                {"name": "human_decision", "source": "{steps.step2_human_review.output.human_decision}", "required": true},
+                {"name": "human_comments", "source": "{steps.step2_human_review.output.human_comments}", "required": false}
+            ],
+            "outputs": [
+                {"name": "status", "required": true},
+                {"name": "message", "required": true},
+                {"name": "human_decision", "required": true},
+                {"name": "human_comments", "required": false},
+                {"name": "final_result", "required": true}
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "step1_prepare",
+        "paths": [
+            {
+                "from": "step1_prepare",
+                "to": "step2_human_review",
+                "condition": {
+                    "type": "always"
+                }
+            },
+            {
+                "from": "step2_human_review",
+                "to": "step3_finalize",
+                "condition": {
+                    "type": "always"
+                }
+            }
+        ]
+    }
+}

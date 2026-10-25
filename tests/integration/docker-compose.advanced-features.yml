@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for testing SQLite-alternative memory backend
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: ia_modules_test
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for distributed memory caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ChromaDB for vector storage (semantic memory)
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+    volumes:
+      - chroma_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mock LLM API server for testing without real API calls
+  mock_llm:
+    build:
+      context: .
+      dockerfile: Dockerfile.mock-llm
+    ports:
+      - "8080:8080"
+    environment:
+      - MOCK_DELAY_MS=100
+      - MOCK_ERROR_RATE=0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Test runner container
+  test_runner:
+    build:
+      context: ../..
+      dockerfile: tests/integration/Dockerfile.test-runner
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      mock_llm:
+        condition: service_healthy
+    environment:
+      # Database connections
+      - TEST_POSTGRESQL_URL=postgresql://testuser:testpass@postgres:5432/ia_modules_test
+      - TEST_REDIS_URL=redis://redis:6379/0
+      - TEST_CHROMADB_URL=http://chromadb:8000
+
+      # Mock LLM API
+      - MOCK_LLM_API_URL=http://mock_llm:8080
+      - OPENAI_API_BASE=http://mock_llm:8080/v1
+      - ANTHROPIC_API_BASE=http://mock_llm:8080/v1
+
+      # Test configuration
+      - PYTEST_ADDOPTS=-v --tb=short --color=yes
+      - COVERAGE_ENABLED=true
+    volumes:
+      - ../..:/app
+      - test_results:/app/test-results
+    command: >
+      sh -c "
+        echo 'Waiting for services to be ready...' &&
+        sleep 5 &&
+        echo 'Running integration tests for advanced features...' &&
+        pytest tests/integration/test_advanced_features.py -v --tb=short
+      "
+
+volumes:
+  chroma_data:
+  test_results:
+
+networks:
+  default:
+    name: ia_modules_test_network

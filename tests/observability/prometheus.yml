@@ -1,0 +1,65 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'ia_modules_test'
+    environment: 'test'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+# rule_files:
+#   - "first_rules.yml"
+#   - "second_rules.yml"
+
+scrape_configs:
+  # Scrape Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Scrape the OpenTelemetry Collector
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+        labels:
+          service: 'otel-collector'
+          component: 'collector'
+      - targets: ['otel-collector:8889']
+        labels:
+          service: 'otel-collector'
+          component: 'exporter'
+
+  # Scrape IA Modules application metrics (when exposed)
+  - job_name: 'ia_modules'
+    static_configs:
+      - targets: ['host.docker.internal:9091']
+        labels:
+          service: 'ia_modules'
+          environment: 'test'
+    # Allow metrics endpoint to not exist during startup
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: host.docker.internal:9091
+
+  # Scrape database exporters (if we add them later)
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: []  # Add postgres_exporter:9187 when available
+
+  - job_name: 'mysql-exporter'
+    static_configs:
+      - targets: []  # Add mysql_exporter:9104 when available
+
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: []  # Add redis_exporter:9121 when available

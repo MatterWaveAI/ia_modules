@@ -1,0 +1,103 @@
+{
+    "name": "Agent-Based Processing Pipeline",
+    "description": "Pipeline that uses agent-based processing steps",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "task",
+            "schema": {"type": "string"},
+            "required": false,
+            "description": "The task the agent should perform"
+        },
+        {
+            "name": "content",
+            "schema": {"type": "string"},
+            "required": false,
+            "description": "The content the agent should analyze"
+        }
+    ],
+    "steps": [
+        {
+            "id": "data_ingestor",
+            "name": "Data Ingestor",
+            "step_class": "SimpleAgentStep",
+            "module": "tests.pipelines.agent_pipeline.steps.simple_agent_step",
+            "config": {
+                "processing_type": "ingestion"
+            },
+            "inputs": [
+                {"name": "task", "source": "{parameters.task}", "required": false},
+                {"name": "content", "source": "{parameters.content}", "required": false}
+            ],
+            "outputs": [
+                {"name": "agent_name", "required": true},
+                {"name": "processing_type", "required": true},
+                {"name": "agent_output", "required": true},
+                {"name": "agent_job_id", "required": false},
+                {"name": "metadata", "required": true}
+            ]
+        },
+        {
+            "id": "decision_agent",
+            "name": "Decision Agent",
+            "step_class": "DecisionAgentStep",
+            "module": "tests.pipelines.agent_pipeline.steps.decision_agent_step",
+            "config": {
+                "decision_logic": "validation"
+            },
+            "inputs": [
+                {"name": "task", "source": "{parameters.task}", "required": false},
+                {"name": "content", "source": "{parameters.content}", "required": false},
+                {"name": "prior_agent_output", "source": "{steps.data_ingestor.output.agent_output}", "required": false}
+            ],
+            "outputs": [
+                {"name": "agent_name", "required": true},
+                {"name": "decision_logic", "required": true},
+                {"name": "decision_explanation", "required": true},
+                {"name": "decision", "required": true},
+                {"name": "confidence", "required": true},
+                {"name": "reasoning", "required": false},
+                {"name": "agent_job_id", "required": false},
+                {"name": "metadata", "required": true}
+            ]
+        },
+        {
+            "id": "final_processor",
+            "name": "Final Processor",
+            "step_class": "SimpleAgentStep",
+            "module": "tests.pipelines.agent_pipeline.steps.simple_agent_step",
+            "config": {
+                "processing_type": "final_processing"
+            },
+            "inputs": [
+                {"name": "task", "source": "{parameters.task}", "required": false},
+                {"name": "content", "source": "{parameters.content}", "required": false},
+                {"name": "ingestion_summary", "source": "{steps.data_ingestor.output.agent_output}", "required": false},
+                {"name": "decision", "source": "{steps.decision_agent.output.decision}", "required": false},
+                {"name": "decision_reasoning", "source": "{steps.decision_agent.output.reasoning}", "required": false}
+            ],
+            "outputs": [
+                {"name": "agent_name", "required": true},
+                {"name": "processing_type", "required": true},
+                {"name": "agent_output", "required": true},
+                {"name": "agent_job_id", "required": false},
+                {"name": "metadata", "required": true}
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "data_ingestor",
+        "paths": [
+            {
+                "from_step": "data_ingestor",
+                "to_step": "decision_agent",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "decision_agent",
+                "to_step": "final_processor",
+                "condition": {"type": "always"}
+            }
+        ]
+    }
+}

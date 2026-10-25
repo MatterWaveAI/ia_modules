@@ -1,0 +1,119 @@
+{
+    "name": "LLM Pipeline with Guardrails",
+    "description": "Example showing how to add input and output guardrails to your existing LLM pipeline",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "user_input",
+            "schema": {"type": "string"},
+            "required": true,
+            "description": "User's input message"
+        }
+    ],
+    "steps": [
+        {
+            "id": "input_guardrails",
+            "name": "Input Safety Check",
+            "step_class": "InputGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "content_field": "user_input",
+                "fail_on_block": true,
+                "redact_pii": true
+            },
+            "inputs": [
+                {
+                    "name": "user_input",
+                    "source": "{parameters.user_input}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "user_input",
+                    "schema": {"type": "string"},
+                    "required": true
+                },
+                {
+                    "name": "input_guardrails_result",
+                    "schema": {"type": "object"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "llm_processing",
+            "name": "LLM Response Generation",
+            "step_class": "LLMStep",
+            "module": "tests.pipelines.guardrails_pipeline.steps.llm_step",
+            "config": {
+                "input_field": "user_input",
+                "output_field": "llm_response",
+                "temperature": 0.7,
+                "max_tokens": 500
+            },
+            "inputs": [
+                {
+                    "name": "user_input",
+                    "source": "{steps.input_guardrails.output.user_input}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "llm_response",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "output_guardrails",
+            "name": "Output Safety Check",
+            "step_class": "OutputGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "content_field": "llm_response",
+                "fail_on_block": true,
+                "max_length": 500
+            },
+            "inputs": [
+                {
+                    "name": "llm_response",
+                    "source": "{steps.llm_processing.output.llm_response}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "llm_response",
+                    "schema": {"type": "string"},
+                    "required": true
+                },
+                {
+                    "name": "output_guardrails_result",
+                    "schema": {"type": "object"},
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "input_guardrails",
+        "paths": [
+            {
+                "from_step": "input_guardrails",
+                "to_step": "llm_processing",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "llm_processing",
+                "to_step": "output_guardrails",
+                "condition": {"type": "always"}
+            }
+        ]
+    }
+}

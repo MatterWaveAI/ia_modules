@@ -1,0 +1,191 @@
+{
+    "name": "Conditional Processing Pipeline",
+    "description": "Pipeline with conditional logic based on data quality",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "threshold",
+            "schema": {"type": "number"},
+            "required": true,
+            "description": "Quality threshold for routing decisions"
+        },
+        {
+            "name": "test_data",
+            "schema": {"type": "array"},
+            "required": true,
+            "description": "Test data to process"
+        }
+    ],
+    "steps": [
+        {
+            "id": "data_ingestor",
+            "name": "Data Ingestor",
+            "step_class": "DataIngestorStep",
+            "module": "tests.pipelines.conditional_pipeline.steps.data_ingestor",
+            "config": {},
+            "inputs": [
+                {
+                    "name": "test_data",
+                    "source": "{parameters.test_data}",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "ingested_data",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "quality_checker",
+            "name": "Quality Checker",
+            "step_class": "QualityCheckerStep",
+            "module": "tests.pipelines.conditional_pipeline.steps.quality_checker",
+            "config": {},
+            "inputs": [
+                {
+                    "name": "ingested_data",
+                    "source": "{steps.data_ingestor.output.ingested_data}",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "quality_score",
+                    "required": true
+                },
+                {
+                    "name": "ingested_data",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "high_quality_processor",
+            "name": "High Quality Processing",
+            "step_class": "HighQualityProcessorStep",
+            "module": "tests.pipelines.conditional_pipeline.steps.high_quality_processor",
+            "config": {
+                "processing_level": "full"
+            },
+            "inputs": [
+                {
+                    "name": "ingested_data",
+                    "source": "{steps.quality_checker.output.ingested_data}",
+                    "required": true
+                },
+                {
+                    "name": "quality_score",
+                    "source": "{steps.quality_checker.output.quality_score}",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "processed_data",
+                    "required": true
+                },
+                {
+                    "name": "processing_level",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "low_quality_processor",
+            "name": "Low Quality Processing",
+            "step_class": "LowQualityProcessorStep",
+            "module": "tests.pipelines.conditional_pipeline.steps.low_quality_processor",
+            "config": {
+                "processing_level": "basic"
+            },
+            "inputs": [
+                {
+                    "name": "ingested_data",
+                    "source": "{steps.quality_checker.output.ingested_data}",
+                    "required": true
+                },
+                {
+                    "name": "quality_score",
+                    "source": "{steps.quality_checker.output.quality_score}",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "processed_data",
+                    "required": true
+                },
+                {
+                    "name": "processing_level",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "results_aggregator",
+            "name": "Results Aggregator",
+            "step_class": "ResultsAggregatorStep",
+            "module": "tests.pipelines.conditional_pipeline.steps.results_aggregator",
+            "config": {},
+            "inputs": [
+                {
+                    "name": "processed_data",
+                    "source": "{steps.high_quality_processor.output.processed_data}|{steps.low_quality_processor.output.processed_data}",
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "aggregated_results",
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "data_ingestor",
+        "paths": [
+            {
+                "from_step": "data_ingestor",
+                "to_step": "quality_checker",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "quality_checker",
+                "to_step": "high_quality_processor",
+                "condition": {
+                    "type": "expression",
+                    "config": {
+                        "source": "quality_score",
+                        "operator": "greater_than_or_equals",
+                        "value": "{{ parameters.threshold }}"
+                    }
+                }
+            },
+            {
+                "from_step": "quality_checker",
+                "to_step": "low_quality_processor",
+                "condition": {
+                    "type": "expression",
+                    "config": {
+                        "source": "quality_score",
+                        "operator": "less_than",
+                        "value": "{{ parameters.threshold }}"
+                    }
+                }
+            },
+            {
+                "from_step": "high_quality_processor",
+                "to_step": "results_aggregator",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "low_quality_processor",
+                "to_step": "results_aggregator",
+                "condition": {"type": "always"}
+            }
+        ]
+    }
+}

@@ -1,0 +1,31 @@
+# Coverage configuration (legacy format for compatibility)
+[run]
+source = ia_modules
+omit =
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */conftest.py
+    tests/llm_config_example.py
+    tests/manual_database_test.py
+    tests/pipeline_runner.py
+    tests/pipeline_runner_with_llm.py
+    showcase_app/*
+branch = True
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+precision = 2
+show_missing = True
+skip_covered = False
+
+[html]
+directory = htmlcov

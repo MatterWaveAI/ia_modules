@@ -1,0 +1,170 @@
+{
+    "name": "Vector RAG Query Pipeline",
+    "description": "Query documents from ChromaDB using vector similarity",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "query",
+            "schema": {"type": "string"},
+            "required": true,
+            "description": "User's question"
+        }
+    ],
+    "steps": [
+        {
+            "id": "input_guardrails",
+            "name": "Input Safety Check",
+            "step_class": "InputGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "content_field": "query",
+                "fail_on_block": true
+            },
+            "inputs": [
+                {"name": "query", "source": "{parameters.query}", "required": true}
+            ],
+            "outputs": [
+                {"name": "query", "required": true},
+                {"name": "input_guardrails_result", "required": true}
+            ]
+        },
+        {
+            "id": "embed_query",
+            "name": "Generate Query Embedding",
+            "step_class": "VectorEmbeddingStep",
+            "module": "tests.pipelines.vector_rag_pipeline.steps.vector_embedding_step",
+            "config": {
+                "text_field": "query",
+                "output_field": "embedding",
+                "embedding_model": "text-embedding-3-small"
+            },
+            "inputs": [
+                {"name": "query", "source": "{steps.input_guardrails.output.query}", "required": true}
+            ],
+            "outputs": [
+                {"name": "embedding", "required": true},
+                {"name": "embedding_model", "required": true}
+            ]
+        },
+        {
+            "id": "retrieve_vectors",
+            "name": "Retrieve Similar Documents",
+            "step_class": "ChromaDBRetrieverStep",
+            "module": "tests.pipelines.vector_rag_pipeline.steps.chromadb_retriever_step",
+            "config": {
+                "collection_name": "documents",
+                "persist_directory": "./chroma_db",
+                "top_k": 3,
+                "embedding_field": "embedding"
+            },
+            "inputs": [
+                {"name": "embedding", "source": "{steps.embed_query.output.embedding}", "required": true}
+            ],
+            "outputs": [
+                {"name": "retrieved_docs", "required": true},
+                {"name": "num_retrieved", "required": true}
+            ]
+        },
+        {
+            "id": "retrieval_guardrails",
+            "name": "Retrieval Safety Check",
+            "step_class": "RetrievalGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "docs_field": "retrieved_docs",
+                "max_doc_length": 5000
+            },
+            "inputs": [
+                {"name": "retrieved_docs", "source": "{steps.retrieve_vectors.output.retrieved_docs}", "required": true}
+            ],
+            "outputs": [
+                {"name": "retrieved_docs", "required": true},
+                {"name": "retrieval_guardrails_result", "required": true}
+            ]
+        },
+        {
+            "id": "build_context",
+            "name": "Build Context",
+            "step_class": "ContextBuilderStep",
+            "module": "tests.pipelines.rag_with_guardrails_pipeline.steps.context_builder",
+            "config": {
+                "docs_field": "retrieved_docs",
+                "max_length": 3000
+            },
+            "inputs": [
+                {"name": "retrieved_docs", "source": "{steps.retrieval_guardrails.output.retrieved_docs}", "required": true}
+            ],
+            "outputs": [
+                {"name": "context", "required": true},
+                {"name": "context_length", "required": true}
+            ]
+        },
+        {
+            "id": "generate_answer",
+            "name": "Generate Answer",
+            "step_class": "RAGLLMStep",
+            "module": "tests.pipelines.rag_with_guardrails_pipeline.steps.rag_llm_step",
+            "config": {
+                "query_field": "query",
+                "context_field": "context",
+                "output_field": "answer",
+                "temperature": 0.7,
+                "max_tokens": 500
+            },
+            "inputs": [
+                {"name": "query", "source": "{steps.input_guardrails.output.query}", "required": true},
+                {"name": "context", "source": "{steps.build_context.output.context}", "required": true}
+            ],
+            "outputs": [
+                {"name": "answer", "required": true}
+            ]
+        },
+        {
+            "id": "output_guardrails",
+            "name": "Output Safety Check",
+            "step_class": "OutputGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "content_field": "answer",
+                "fail_on_block": true,
+                "max_length": 1000
+            },
+            "inputs": [
+                {"name": "answer", "source": "{steps.generate_answer.output.answer}", "required": true}
+            ],
+            "outputs": [
+                {"name": "answer", "required": true},
+                {"name": "output_guardrails_result", "required": true}
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "input_guardrails",
+        "paths": [
+            {
+                "from_step": "input_guardrails",
+                "to_step": "embed_query"
+            },
+            {
+                "from_step": "embed_query",
+                "to_step": "retrieve_vectors"
+            },
+            {
+                "from_step": "retrieve_vectors",
+                "to_step": "retrieval_guardrails"
+            },
+            {
+                "from_step": "retrieval_guardrails",
+                "to_step": "build_context"
+            },
+            {
+                "from_step": "build_context",
+                "to_step": "generate_answer"
+            },
+            {
+                "from_step": "generate_answer",
+                "to_step": "output_guardrails"
+            }
+        ]
+    }
+}

@@ -1,0 +1,86 @@
+{
+  "name": "web_scraping_demo",
+  "description": "Demonstrates web scraping capabilities with content extraction and AI analysis",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "id": "scrape_content",
+      "name": "Scrape Web Content",
+      "step_class": "WebScrapingStep",
+      "module": "backend.pipelines.pattern_steps",
+      "config": {
+        "urls": [
+          "https://en.wikipedia.org/wiki/Web_scraping",
+          "https://en.wikipedia.org/wiki/Data_mining"
+        ],
+        "extract_text": true,
+        "include_metadata": true,
+        "max_concurrent": 2
+      }
+    },
+    {
+      "id": "analyze_content",
+      "name": "Analyze Scraped Content",
+      "step_class": "ContentAnalysisStep",
+      "module": "backend.pipelines.pattern_steps",
+      "config": {
+        "analysis_type": "summarize_and_extract_key_points",
+        "focus_areas": [
+          "techniques",
+          "challenges",
+          "legal_considerations",
+          "best_practices"
+        ],
+        "max_tokens": 1000
+      }
+    },
+    {
+      "id": "generate_report",
+      "name": "Generate Research Report",
+      "step_class": "ReportGenerationStep",
+      "module": "backend.pipelines.pattern_steps",
+      "config": {
+        "report_format": "markdown",
+        "sections": [
+          "executive_summary",
+          "key_findings",
+          "technical_details",
+          "recommendations"
+        ],
+        "include_sources": true
+      }
+    }
+  ],
+  "flow": {
+    "start_at": "scrape_content",
+    "paths": [
+      {
+        "from": "scrape_content",
+        "to": "analyze_content",
+        "condition": {
+          "type": "success"
+        }
+      },
+      {
+        "from": "analyze_content",
+        "to": "generate_report",
+        "condition": {
+          "type": "always"
+        }
+      },
+      {
+        "from": "generate_report",
+        "to": "end_with_success",
+        "condition": {
+          "type": "always"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "author": "ia_modules",
+    "tags": ["web_scraping", "content_extraction", "data_collection", "research", "demo"],
+    "category": "tools",
+    "tools_used": ["web_scraper", "web_scraper_batch"]
+  }
+}

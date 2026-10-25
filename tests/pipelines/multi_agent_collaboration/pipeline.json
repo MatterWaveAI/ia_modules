@@ -1,0 +1,206 @@
+{
+    "name": "Multi-Agent Collaboration Pipeline",
+    "description": "Agents collaborate iteratively using agentic design patterns - planner, executor, critic, and metacognition agents work together",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "task",
+            "schema": {"type": "string"},
+            "required": true,
+            "description": "The high-level task to accomplish"
+        },
+        {
+            "name": "max_iterations",
+            "schema": {"type": "integer"},
+            "required": false,
+            "default": 3,
+            "description": "Maximum number of collaboration iterations"
+        }
+    ],
+    "steps": [
+        {
+            "id": "planner",
+            "name": "Planning Agent",
+            "step_class": "PlanningAgentStep",
+            "module": "tests.pipelines.multi_agent_collaboration.steps.planning_agent",
+            "config": {
+                "pattern": "planning",
+                "role": "Create detailed execution plans"
+            },
+            "inputs": [
+                {"name": "task", "source": "{parameters.task}", "required": true},
+                {"name": "max_iterations", "source": "{parameters.max_iterations}", "required": false},
+                {"name": "iteration", "source": "{steps.decide_continue.output.iteration}", "required": false},
+                {"name": "feedback", "source": "{steps.critic.output.feedback}", "required": false},
+                {"name": "strategy_adjustments", "source": "{steps.metacognition.output.strategy_adjustments}", "required": false}
+            ],
+            "outputs": [
+                {"name": "plan", "required": true},
+                {"name": "current_step", "required": true},
+                {"name": "iteration", "required": true},
+                {"name": "execution_history", "required": true}
+            ]
+        },
+        {
+            "id": "executor",
+            "name": "Execution Agent",
+            "step_class": "ExecutionAgentStep",
+            "module": "tests.pipelines.multi_agent_collaboration.steps.execution_agent",
+            "config": {
+                "pattern": "tool_use",
+                "role": "Execute the plan steps"
+            },
+            "inputs": [
+                {"name": "plan", "source": "{steps.planner.output.plan}", "required": true},
+                {"name": "task", "source": "{parameters.task}", "required": true},
+                {"name": "iteration", "source": "{steps.planner.output.iteration}", "required": true},
+                {"name": "execution_history", "source": "{steps.planner.output.execution_history}", "required": true}
+            ],
+            "outputs": [
+                {"name": "execution_result", "required": true},
+                {"name": "current_step", "required": true},
+                {"name": "output", "required": true},
+                {"name": "iteration", "required": true},
+                {"name": "execution_history", "required": true}
+            ]
+        },
+        {
+            "id": "critic",
+            "name": "Reflection Agent",
+            "step_class": "CriticAgentStep",
+            "module": "tests.pipelines.multi_agent_collaboration.steps.critic_agent",
+            "config": {
+                "pattern": "reflection",
+                "role": "Critique and provide improvement feedback"
+            },
+            "inputs": [
+                {"name": "execution_result", "source": "{steps.executor.output.execution_result}", "required": true},
+                {"name": "output", "source": "{steps.executor.output.output}", "required": true},
+                {"name": "iteration", "source": "{steps.executor.output.iteration}", "required": true},
+                {"name": "task", "source": "{parameters.task}", "required": true},
+                {"name": "execution_history", "source": "{steps.executor.output.execution_history}", "required": true}
+            ],
+            "outputs": [
+                {"name": "critique", "required": true},
+                {"name": "current_step", "required": true},
+                {"name": "quality_score", "required": true},
+                {"name": "feedback", "required": true},
+                {"name": "improvements", "required": true},
+                {"name": "iteration", "required": true},
+                {"name": "execution_history", "required": true}
+            ]
+        },
+        {
+            "id": "metacognition",
+            "name": "Metacognition Agent",
+            "step_class": "MetacognitionAgentStep",
+            "module": "tests.pipelines.multi_agent_collaboration.steps.metacognition_agent",
+            "config": {
+                "pattern": "metacognition",
+                "role": "Analyze collaboration effectiveness and adjust strategy"
+            },
+            "inputs": [
+                {"name": "execution_history", "source": "{steps.critic.output.execution_history}", "required": true},
+                {"name": "iteration", "source": "{steps.critic.output.iteration}", "required": true},
+                {"name": "quality_score", "source": "{steps.critic.output.quality_score}", "required": true},
+                {"name": "previous_quality_score", "source": "{steps.metacognition.output.previous_quality_score}", "required": false}
+            ],
+            "outputs": [
+                {"name": "metacognition", "required": true},
+                {"name": "current_step", "required": true},
+                {"name": "strategy_adjustments", "required": true},
+                {"name": "collaboration_health", "required": true},
+                {"name": "previous_quality_score", "required": true},
+                {"name": "iteration", "required": true},
+                {"name": "execution_history", "required": true},
+                {"name": "quality_score", "required": true}
+            ]
+        },
+        {
+            "id": "decide_continue",
+            "name": "Iteration Decision",
+            "step_class": "IterationDecisionStep",
+            "module": "tests.pipelines.multi_agent_collaboration.steps.iteration_decision",
+            "config": {
+                "quality_threshold": 0.8
+            },
+            "inputs": [
+                {"name": "quality_score", "source": "{steps.metacognition.output.quality_score}", "required": true},
+                {"name": "iteration", "source": "{steps.metacognition.output.iteration}", "required": true},
+                {"name": "max_iterations", "source": "{parameters.max_iterations}", "required": false},
+                {"name": "execution_history", "source": "{steps.metacognition.output.execution_history}", "required": true}
+            ],
+            "outputs": [
+                {"name": "should_continue", "required": true},
+                {"name": "decision", "required": true},
+                {"name": "current_step", "required": true},
+                {"name": "iteration", "required": true},
+                {"name": "execution_history", "required": true},
+                {"name": "quality_score", "required": true}
+            ]
+        },
+        {
+            "id": "final_synthesis",
+            "name": "Final Synthesis",
+            "step_class": "SynthesisAgentStep",
+            "module": "tests.pipelines.multi_agent_collaboration.steps.synthesis_agent",
+            "config": {
+                "role": "Combine all agent insights into final output"
+            },
+            "inputs": [
+                {"name": "task", "source": "{parameters.task}", "required": true},
+                {"name": "execution_history", "source": "{steps.decide_continue.output.execution_history}", "required": true},
+                {"name": "quality_score", "source": "{steps.decide_continue.output.quality_score}", "required": true},
+                {"name": "iteration", "source": "{steps.decide_continue.output.iteration}", "required": true}
+            ],
+            "outputs": [
+                {"name": "synthesis", "required": true},
+                {"name": "final_output", "required": true},
+                {"name": "current_step", "required": true}
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "planner",
+        "paths": [
+            {
+                "from": "planner",
+                "to": "executor",
+                "condition": {"type": "always"}
+            },
+            {
+                "from": "executor",
+                "to": "critic",
+                "condition": {"type": "always"}
+            },
+            {
+                "from": "critic",
+                "to": "metacognition",
+                "condition": {"type": "always"}
+            },
+            {
+                "from": "metacognition",
+                "to": "decide_continue",
+                "condition": {"type": "always"}
+            },
+            {
+                "from": "decide_continue",
+                "to": "planner",
+                "condition": {
+                    "type": "field_equals",
+                    "field": "should_continue",
+                    "value": true
+                }
+            },
+            {
+                "from": "decide_continue",
+                "to": "final_synthesis",
+                "condition": {
+                    "type": "field_equals",
+                    "field": "should_continue",
+                    "value": false
+                }
+            }
+        ]
+    }
+}

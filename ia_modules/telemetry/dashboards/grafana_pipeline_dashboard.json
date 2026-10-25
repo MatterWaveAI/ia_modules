@@ -1,0 +1,155 @@
+{
+  "dashboard": {
+    "title": "IA Modules - Pipeline Monitoring",
+    "tags": ["ia-modules", "pipelines"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Pipeline Execution Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ia_modules_pipeline_executions_total[5m])",
+            "legendFormat": "{{pipeline_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}
+      },
+      {
+        "id": 2,
+        "title": "Pipeline Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(ia_modules_pipeline_executions_total{status=\"success\"}[5m])) / sum(rate(ia_modules_pipeline_executions_total[5m])) * 100",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4}
+      },
+      {
+        "id": 3,
+        "title": "Active Pipelines",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ia_modules_active_pipelines",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4}
+      },
+      {
+        "id": 4,
+        "title": "Pipeline Duration (P95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(ia_modules_pipeline_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{pipeline_name}} P95",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}
+      },
+      {
+        "id": 5,
+        "title": "Step Duration by Name",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ia_modules_step_duration_seconds_sum[5m]) / rate(ia_modules_step_duration_seconds_count[5m])",
+            "legendFormat": "{{step_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}
+      },
+      {
+        "id": 6,
+        "title": "Error Rate by Type",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ia_modules_pipeline_errors_total[5m])",
+            "legendFormat": "{{error_type}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8}
+      },
+      {
+        "id": 7,
+        "title": "API Calls per Pipeline",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ia_modules_api_calls_total[5m])",
+            "legendFormat": "{{pipeline_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8}
+      },
+      {
+        "id": 8,
+        "title": "Cost per Hour",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ia_modules_pipeline_cost_usd_total[1h])",
+            "legendFormat": "{{pipeline_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8}
+      },
+      {
+        "id": 9,
+        "title": "Throughput (items/sec)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ia_modules_items_processed_total[5m])",
+            "legendFormat": "{{pipeline_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8}
+      },
+      {
+        "id": 10,
+        "title": "Memory Usage per Pipeline",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ia_modules_pipeline_memory_bytes",
+            "legendFormat": "{{pipeline_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 0, "y": 32, "w": 12, "h": 8}
+      },
+      {
+        "id": 11,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ia_modules_pipeline_cpu_percent",
+            "legendFormat": "{{pipeline_name}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"x": 12, "y": 32, "w": 12, "h": 8}
+      }
+    ],
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}

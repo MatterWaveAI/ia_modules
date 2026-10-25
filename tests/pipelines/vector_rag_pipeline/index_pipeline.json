@@ -1,0 +1,50 @@
+{
+    "name": "Vector Database Indexing Pipeline",
+    "description": "Index documents into ChromaDB vector database",
+    "version": "1.0.0",
+    "steps": [
+        {
+            "id": "load_documents",
+            "name": "Load Documents",
+            "step_class": "DocumentLoaderStep",
+            "module": "tests.pipelines.rag_with_guardrails_pipeline.steps.document_loader",
+            "config": {
+                "docs_dir": "../rag_with_guardrails_pipeline/sample_docs",
+                "file_types": [".txt", ".md", ".json"]
+            },
+            "inputs": [],
+            "outputs": [
+                {"name": "documents", "required": true},
+                {"name": "num_documents", "required": true}
+            ]
+        },
+        {
+            "id": "index_vectors",
+            "name": "Index into ChromaDB",
+            "step_class": "ChromaDBIndexerStep",
+            "module": "tests.pipelines.vector_rag_pipeline.steps.chromadb_indexer_step",
+            "config": {
+                "collection_name": "documents",
+                "persist_directory": "./chroma_db",
+                "embedding_model": "text-embedding-3-small"
+            },
+            "inputs": [
+                {"name": "documents", "source": "{steps.load_documents.output.documents}", "required": true}
+            ],
+            "outputs": [
+                {"name": "indexed_count", "required": true},
+                {"name": "collection_name", "required": true},
+                {"name": "vector_db_path", "required": true}
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "load_documents",
+        "paths": [
+            {
+                "from_step": "load_documents",
+                "to_step": "index_vectors"
+            }
+        ]
+    }
+}

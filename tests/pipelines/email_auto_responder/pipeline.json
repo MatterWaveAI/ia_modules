@@ -1,0 +1,164 @@
+{
+    "name": "Email Auto Responder",
+    "description": "Intelligent email classification and automated response generation system with real email fetching",
+    "version": "2.0.0",
+    "parameters": [
+        {
+            "name": "source_type",
+            "schema": {
+                "type": "string",
+                "enum": ["mock", "imap", "graph", "file", "direct"]
+            },
+            "required": false,
+            "default": "mock",
+            "description": "Email source: mock (demo), imap (Gmail/etc), graph (Outlook), file (JSON), direct (input)"
+        },
+        {
+            "name": "mock_scenarios",
+            "schema": {
+                "type": "string",
+                "enum": ["all", "urgent", "normal", "spam"]
+            },
+            "required": false,
+            "default": "all",
+            "description": "For mock source: which scenarios to include"
+        },
+        {
+            "name": "max_emails",
+            "schema": {"type": "integer"},
+            "required": false,
+            "default": 10,
+            "description": "Maximum number of emails to process"
+        },
+        {
+            "name": "imap_config",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "server": {"type": "string"},
+                    "port": {"type": "integer"},
+                    "username": {"type": "string"},
+                    "password": {"type": "string"},
+                    "folder": {"type": "string"},
+                    "only_unread": {"type": "boolean"}
+                }
+            },
+            "required": false,
+            "description": "IMAP connection configuration (for source_type: imap)"
+        },
+        {
+            "name": "graph_config",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "access_token": {"type": "string"},
+                    "user_email": {"type": "string"},
+                    "folder": {"type": "string"},
+                    "only_unread": {"type": "boolean"}
+                }
+            },
+            "required": false,
+            "description": "Microsoft Graph API configuration (for source_type: graph)"
+        },
+        {
+            "name": "file_path",
+            "schema": {"type": "string"},
+            "required": false,
+            "description": "Path to JSON file with emails (for source_type: file)"
+        },
+        {
+            "name": "emails",
+            "schema": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "from": {"type": "string"},
+                        "subject": {"type": "string"},
+                        "body": {"type": "string"},
+                        "attachments": {"type": "array"}
+                    }
+                }
+            },
+            "required": false,
+            "description": "Direct email input (for source_type: direct)"
+        },
+        {
+            "name": "sender_name",
+            "schema": {"type": "string"},
+            "required": false,
+            "default": "Support Team",
+            "description": "Name of the response sender"
+        },
+        {
+            "name": "company_name",
+            "schema": {"type": "string"},
+            "required": false,
+            "default": "TechCorp",
+            "description": "Company name for responses"
+        }
+    ],
+    "steps": [
+        {
+            "id": "fetch_emails",
+            "name": "Email Fetcher",
+            "step_class": "EmailFetcherStep",
+            "module": "tests.pipelines.email_auto_responder.steps.email_fetcher",
+            "config": {
+                "source_type": "mock",
+                "max_emails": 10
+            },
+            "inputs": [
+                {"name": "source_type", "source": "{parameters.source_type}", "required": false},
+                {"name": "mock_scenarios", "source": "{parameters.mock_scenarios}", "required": false},
+                {"name": "emails", "source": "{parameters.emails}", "required": false},
+                {"name": "imap_config", "source": "{parameters.imap_config}", "required": false},
+                {"name": "graph_config", "source": "{parameters.graph_config}", "required": false},
+                {"name": "file_path", "source": "{parameters.file_path}", "required": false}
+            ],
+            "outputs": [
+                {"name": "emails", "required": true},
+                {"name": "email_count", "required": true},
+                {"name": "source", "required": true},
+                {"name": "fetched", "required": true}
+            ]
+        },
+        {
+            "id": "batch_process",
+            "name": "Batch Email Processor",
+            "step_class": "BatchProcessorStep",
+            "module": "tests.pipelines.email_auto_responder.steps.batch_processor",
+            "config": {
+                "sender_name": "Support Team",
+                "sender_email": "support@techcorp.com",
+                "company_name": "TechCorp",
+                "urgent_keywords": [
+                    "urgent", "asap", "critical", "emergency", "immediate",
+                    "deadline", "important", "priority", "time-sensitive"
+                ],
+                "spam_keywords": [
+                    "congratulations", "winner", "prize", "lottery", "click here",
+                    "free money", "act now", "limited time", "nigerian prince"
+                ]
+            },
+            "inputs": [
+                {"name": "emails", "source": "{steps.fetch_emails.output.emails}", "required": true}
+            ],
+            "outputs": [
+                {"name": "processed_emails", "required": true},
+                {"name": "summary", "required": true},
+                {"name": "processing_complete", "required": true}
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "fetch_emails",
+        "paths": [
+            {
+                "from": "fetch_emails",
+                "to": "batch_process",
+                "condition": {"type": "always"}
+            }
+        ]
+    }
+}

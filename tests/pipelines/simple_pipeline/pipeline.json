@@ -1,0 +1,96 @@
+{
+    "name": "Simple Three-Step Pipeline",
+    "description": "A simple pipeline with three steps passing data between them",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "topic",
+            "schema": {"type": "string"},
+            "required": true,
+            "description": "The topic to process"
+        }
+    ],
+    "steps": [
+        {
+            "id": "step1",
+            "name": "Data Preparation",
+            "step_class": "Step1",
+            "module": "tests.pipelines.simple_pipeline.steps.step1",
+            "config": {},
+            "inputs": [
+                {
+                    "name": "topic",
+                    "source": "{parameters.topic}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "topic",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "step2",
+            "name": "Data Enrichment",
+            "step_class": "Step2",
+            "module": "tests.pipelines.simple_pipeline.steps.step2",
+            "config": {},
+            "inputs": [
+                {
+                    "name": "topic",
+                    "source": "{steps.step1.output.topic}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "topic",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "step3",
+            "name": "Data Finalization",
+            "step_class": "Step3",
+            "module": "tests.pipelines.simple_pipeline.steps.step3",
+            "config": {},
+            "inputs": [
+                {
+                    "name": "topic",
+                    "source": "{steps.step2.output.topic}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "topic",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "step1",
+        "paths": [
+            {
+                "from_step": "step1",
+                "to_step": "step2",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "step2",
+                "to_step": "step3",
+                "condition": {"type": "always"}
+            }
+        ]
+    }
+}

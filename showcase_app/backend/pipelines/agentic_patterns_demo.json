@@ -1,0 +1,86 @@
+{
+  "name": "agentic_patterns_demo",
+  "description": "Demonstrates agentic design patterns: Reflection, Planning, and Tool Use",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "id": "plan_research",
+      "name": "Plan Research Task",
+      "step_class": "PlanningStep",
+      "module": "backend.pipelines.pattern_steps",
+      "config": {
+        "goal": "Research and summarize the key benefits of renewable energy",
+        "constraints": [
+          "Focus on solar and wind power",
+          "Include cost-benefit analysis",
+          "Keep summary under 500 words"
+        ],
+        "context": {
+          "audience": "general public",
+          "purpose": "educational article"
+        }
+      }
+    },
+    {
+      "id": "use_tools",
+      "name": "Calculate ROI with Tools",
+      "step_class": "ToolUseStep",
+      "module": "backend.pipelines.pattern_steps",
+      "config": {
+        "task": "Calculate the ROI of installing 5kW solar panels with $15,000 cost and $100/month savings",
+        "available_tools": [
+          "calculator",
+          "search",
+          "code_executor"
+        ]
+      }
+    },
+    {
+      "id": "improve_draft",
+      "name": "Improve Draft with Reflection",
+      "step_class": "ReflectionStep",
+      "module": "backend.pipelines.pattern_steps",
+      "config": {
+        "initial_output": "Solar and wind power are renewable energy sources. They help reduce carbon emissions. Solar panels can save money on electricity bills. Wind turbines generate clean energy. Both are becoming more affordable.",
+        "criteria": {
+          "clarity": "Text should be clear and easy to understand",
+          "completeness": "Should cover key points from the plan",
+          "coherence": "Ideas should flow logically",
+          "accuracy": "Facts should be correct and well-supported"
+        },
+        "max_iterations": 3
+      }
+    }
+  ],
+  "flow": {
+    "start_at": "plan_research",
+    "paths": [
+      {
+        "from": "plan_research",
+        "to": "use_tools",
+        "condition": {
+          "type": "always"
+        }
+      },
+      {
+        "from": "use_tools",
+        "to": "improve_draft",
+        "condition": {
+          "type": "always"
+        }
+      },
+      {
+        "from": "improve_draft",
+        "to": "end_with_success",
+        "condition": {
+          "type": "always"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "author": "ia_modules",
+    "tags": ["agentic", "patterns", "reflection", "planning", "tool-use", "demo"],
+    "category": "examples"
+  }
+}

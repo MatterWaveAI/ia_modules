@@ -1,0 +1,404 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.14"]
+
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        # python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    services:
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}'
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,all]"
+
+    - name: Run unit tests only
+      env:
+        REDIS_URL: redis://localhost:6379
+      run: |
+        pytest tests/unit/ -v --tb=short \
+          --cov=ia_modules \
+          --cov-report=xml \
+          --cov-report=term \
+          --cov-report=html \
+          --cov-config=pyproject.toml
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff mypy
+
+    - name: Lint with ruff
+      run: |
+        ruff check . --output-format=github
+
+    - name: Type check with mypy
+      run: |
+        mypy ia_modules --ignore-missing-imports
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_metrics
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      prometheus:
+        image: prom/prometheus:latest
+        options: >-
+          --health-cmd "wget --quiet --tries=1 --spider http://localhost:9090/-/healthy || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 19090:9090
+
+      jaeger:
+        image: jaegertracing/jaeger:latest
+        env:
+          COLLECTOR_OTLP_ENABLED: "true"
+        options: >-
+          --health-cmd "wget --quiet --tries=1 --spider http://localhost:16686/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 16686:16686
+          - 14268:14268
+          - 24317:4317
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Start OTel Collector with custom config
+      run: |
+        # Copy config and adjust Jaeger endpoint for CI (service on mapped port)
+        cp tests/observability/otel-collector-config.yml /tmp/otel-config.yml
+        sed -i 's|jaeger:4317|localhost:24317|g' /tmp/otel-config.yml
+        docker run -d --name otel-collector \
+          --network host \
+          -v /tmp/otel-config.yml:/etc/otelcol-contrib/config.yaml \
+          otel/opentelemetry-collector-contrib:latest
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:13133/ > /dev/null 2>&1; then
+            echo "OTel Collector is healthy"
+            break
+          fi
+          echo "Waiting for OTel Collector... ($i/30)"
+          sleep 2
+        done
+
+    - name: Start Grafana with Prometheus datasource
+      run: |
+        mkdir -p /tmp/grafana-provisioning/datasources
+        cat > /tmp/grafana-provisioning/datasources/prometheus.yml << 'EOF'
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            access: proxy
+            url: http://localhost:19090
+            isDefault: true
+        EOF
+        docker run -d --name grafana \
+          --network host \
+          -e GF_SECURITY_ADMIN_PASSWORD=admin \
+          -e GF_SECURITY_ADMIN_USER=admin \
+          -e GF_AUTH_ANONYMOUS_ENABLED=true \
+          -e GF_AUTH_ANONYMOUS_ORG_ROLE=Admin \
+          -v /tmp/grafana-provisioning:/etc/grafana/provisioning \
+          grafana/grafana:latest
+        # Wait for Grafana to be healthy
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
+            echo "Grafana is healthy"
+            break
+          fi
+          echo "Waiting for Grafana... ($i/30)"
+          sleep 2
+        done
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,all]"
+
+    - name: Run Redis integration tests
+      env:
+        REDIS_URL: redis://localhost:6379
+      run: |
+        pytest tests/integration/test_redis_metric_storage.py -v --tb=short
+
+    - name: Run observability integration tests
+      env:
+        PROMETHEUS_URL: http://localhost:19090
+        OTEL_COLLECTOR_URL: http://localhost:4318
+        OTEL_COLLECTOR_ENDPOINT: http://localhost:4318
+        GRAFANA_URL: http://localhost:3000
+        JAEGER_URL: http://localhost:16686
+      run: |
+        pytest tests/integration/test_observability_integration.py tests/integration/test_agent_pipeline_observability_e2e.py -v --tb=short
+
+    - name: Run all other integration tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_metrics
+        TEST_POSTGRESQL_URL: postgresql://postgres:postgres@localhost:5432/test_metrics
+        REDIS_URL: redis://localhost:6379
+        PROMETHEUS_URL: http://localhost:19090
+        OTEL_COLLECTOR_URL: http://localhost:4318
+        OTEL_COLLECTOR_ENDPOINT: http://localhost:4318
+        GRAFANA_URL: http://localhost:3000
+        JAEGER_URL: http://localhost:16686
+      # These files are ignored here because they already run in dedicated steps above (PostgreSQL, Redis, Observability)
+      run: |
+        pytest tests/integration/ -v --tb=short \
+          --ignore=tests/integration/test_redis_metric_storage.py \
+          --ignore=tests/integration/test_observability_integration.py \
+          --ignore=tests/integration/test_agent_pipeline_observability_e2e.py
+
+  showcase-tests:
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: showcase
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,all]"
+        pip install -r showcase_app/backend/requirements.txt
+        npm install -g opencode-ai
+
+    - name: Run showcase Python tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/showcase
+        REDIS_URL: redis://localhost:6379
+        PYTHONPATH: showcase_app/backend
+        LLM_PROVIDER: zai-coding-plan
+        LLM_MODEL: glm-5.1
+        LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      # e2e tests are ignored here because they run in the showcase-e2e job via Playwright
+      run: |
+        pytest showcase_app/tests/ -v --tb=short -k "not e2e" \
+          --ignore=showcase_app/tests/e2e
+
+  showcase-e2e:
+    runs-on: ubuntu-latest
+    needs: showcase-tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: showcase
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,all]"
+        pip install -r showcase_app/backend/requirements.txt
+
+    - name: Install frontend dependencies
+      run: |
+        cd showcase_app/frontend
+        npm install --legacy-peer-deps
+
+    - name: Install Playwright
+      run: |
+        cd showcase_app
+        npm init -y > /dev/null 2>&1
+        npm install @playwright/test
+        npx playwright install --with-deps chromium
+
+    - name: Run Playwright E2E tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/showcase
+        REDIS_URL: redis://localhost:6379
+        PYTHONPATH: showcase_app/backend
+        CI: true
+      run: |
+        cd showcase_app
+        npx playwright test --config=playwright.config.js --project=chromium
+
+    - name: Upload Playwright report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: showcase_app/playwright-report/
+        retention-days: 7
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Build package
+      run: python -m build
+
+    - name: Check package
+      run: twine check dist/*
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+

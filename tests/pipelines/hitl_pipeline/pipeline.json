@@ -1,0 +1,254 @@
+{
+    "name": "Human-in-the-Loop Test Pipeline",
+    "description": "Comprehensive test pipeline demonstrating various HITL interaction patterns",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "content",
+            "schema": {"type": "string"},
+            "required": false,
+            "description": "The content to process through the HITL pipeline"
+        }
+    ],
+    "steps": [
+        {
+            "id": "initial_processing",
+            "name": "Initial Data Processing",
+            "step_class": "InitialProcessingStep",
+            "module": "tests.pipelines.hitl_pipeline.steps.initial_processing",
+            "config": {
+                "processing_type": "automated",
+                "quality_threshold": 0.8
+            },
+            "inputs": [
+                {"name": "content", "source": "{parameters.content}", "required": false}
+            ],
+            "outputs": [
+                {"name": "processing_id", "required": true},
+                {"name": "original_content", "required": true},
+                {"name": "processed_content", "required": true},
+                {"name": "quality_score", "required": true},
+                {"name": "confidence", "required": true},
+                {"name": "processing_type", "required": true},
+                {"name": "issues_detected", "required": true},
+                {"name": "metadata", "required": true}
+            ]
+        },
+        {
+            "id": "quality_assessment",
+            "name": "Quality Assessment",
+            "step_class": "QualityAssessmentStep",
+            "module": "tests.pipelines.hitl_pipeline.steps.quality_assessment",
+            "config": {
+                "confidence_threshold": 0.85,
+                "escalation_enabled": true
+            },
+            "inputs": [
+                {"name": "quality_score", "source": "{steps.initial_processing.output.quality_score}", "required": true},
+                {"name": "confidence", "source": "{steps.initial_processing.output.confidence}", "required": true},
+                {"name": "issues_detected", "source": "{steps.initial_processing.output.issues_detected}", "required": true}
+            ],
+            "outputs": [
+                {"name": "quality_assessment", "required": true},
+                {"name": "requires_human_review", "required": true},
+                {"name": "review_reasons", "required": true},
+                {"name": "urgency", "required": true}
+            ]
+        },
+        {
+            "id": "human_review_pause",
+            "name": "Human Review and Approval",
+            "step_class": "HumanReviewStep",
+            "module": "tests.pipelines.hitl_pipeline.steps.human_review",
+            "config": {
+                "timeout_seconds": 300,
+                "approval_required": true,
+                "ui_schema": {
+                    "type": "review_approval",
+                    "title": "Content Review Required",
+                    "description": "Please review the processed content and provide your decision."
+                }
+            },
+            "inputs": [
+                {"name": "processed_content", "source": "{steps.initial_processing.output.processed_content}", "required": true},
+                {"name": "quality_assessment", "source": "{steps.quality_assessment.output.quality_assessment}", "required": true},
+                {"name": "review_reasons", "source": "{steps.quality_assessment.output.review_reasons}", "required": true},
+                {"name": "quality_score", "source": "{steps.initial_processing.output.quality_score}", "required": true},
+                {"name": "urgency", "source": "{steps.quality_assessment.output.urgency}", "required": false}
+            ],
+            "outputs": [
+                {"name": "decision", "required": true},
+                {"name": "human_feedback", "required": true},
+                {"name": "interaction_id", "required": true},
+                {"name": "ui_schema", "required": true},
+                {"name": "review_data", "required": true},
+                {"name": "processed_content", "required": true},
+                {"name": "enhancement_iteration", "required": false},
+                {"name": "enhancement_history", "required": false}
+            ]
+        },
+        {
+            "id": "manual_enhancement",
+            "name": "Manual Content Enhancement",
+            "step_class": "ManualEnhancementStep",
+            "module": "tests.pipelines.hitl_pipeline.steps.manual_enhancement",
+            "config": {
+                "enhancement_type": "iterative",
+                "max_iterations": 3,
+                "timeout_seconds": 600
+            },
+            "inputs": [
+                {"name": "processed_content", "source": "{steps.human_review_pause.output.processed_content}", "required": true},
+                {"name": "human_feedback", "source": "{steps.human_review_pause.output.human_feedback}", "required": false},
+                {"name": "enhancement_iteration", "source": "{steps.human_review_pause.output.enhancement_iteration}", "required": false},
+                {"name": "enhancement_history", "source": "{steps.human_review_pause.output.enhancement_history}", "required": false}
+            ],
+            "outputs": [
+                {"name": "processed_content", "required": true},
+                {"name": "enhancement_history", "required": true},
+                {"name": "enhancement_complete", "required": true},
+                {"name": "final_enhanced_content", "required": false}
+            ]
+        },
+        {
+            "id": "collaborative_decision",
+            "name": "Multi-Stakeholder Decision",
+            "step_class": "CollaborativeDecisionStep",
+            "module": "tests.pipelines.hitl_pipeline.steps.collaborative_decision",
+            "config": {
+                "stakeholders": ["reviewer1", "reviewer2", "manager"],
+                "decision_type": "majority",
+                "timeout_hours": 24,
+                "voting_options": ["approve", "reject", "request_changes"]
+            },
+            "inputs": [
+                {"name": "processed_content", "source": "{steps.human_review_pause.output.processed_content}", "required": true},
+                {"name": "quality_assessment", "source": "{steps.quality_assessment.output.quality_assessment}", "required": false},
+                {"name": "human_feedback", "source": "{steps.human_review_pause.output.human_feedback}", "required": false},
+                {"name": "quality_score", "source": "{steps.initial_processing.output.quality_score}", "required": false}
+            ],
+            "outputs": [
+                {"name": "collaborative_decision", "required": true},
+                {"name": "final_decision", "required": true},
+                {"name": "stakeholder_feedback", "required": true},
+                {"name": "decision_complete", "required": true}
+            ]
+        },
+        {
+            "id": "final_processing",
+            "name": "Final Processing",
+            "step_class": "FinalProcessingStep",
+            "module": "tests.pipelines.hitl_pipeline.steps.final_processing",
+            "config": {
+                "output_format": "json",
+                "include_audit_trail": true
+            },
+            "inputs": [
+                {"name": "processing_id", "source": "{steps.initial_processing.output.processing_id}", "required": true},
+                {"name": "original_content", "source": "{steps.initial_processing.output.original_content}", "required": true},
+                {"name": "processed_content", "source": "{steps.initial_processing.output.processed_content}", "required": true},
+                {"name": "quality_score", "source": "{steps.initial_processing.output.quality_score}", "required": true},
+                {"name": "confidence", "source": "{steps.initial_processing.output.confidence}", "required": true},
+                {"name": "requires_human_review", "source": "{steps.quality_assessment.output.requires_human_review}", "required": false},
+                {"name": "human_feedback", "source": "{steps.human_review_pause.output.human_feedback}", "required": false},
+                {"name": "decision", "source": "{steps.human_review_pause.output.decision}", "required": false},
+                {"name": "enhancement_history", "source": "{steps.manual_enhancement.output.enhancement_history}", "required": false},
+                {"name": "final_enhanced_content", "source": "{steps.manual_enhancement.output.final_enhanced_content}", "required": false},
+                {"name": "collaborative_decision", "source": "{steps.collaborative_decision.output.collaborative_decision}", "required": false}
+            ],
+            "outputs": [
+                {"name": "status", "required": true},
+                {"name": "processing_summary", "required": true},
+                {"name": "hitl_summary", "required": true},
+                {"name": "audit_trail", "required": false},
+                {"name": "complete_data_trace", "required": true}
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "initial_processing",
+        "paths": [
+            {
+                "from": "initial_processing",
+                "to": "quality_assessment",
+                "condition": {
+                    "type": "always"
+                }
+            },
+            {
+                "from": "quality_assessment",
+                "to": "human_review_pause",
+                "condition": {
+                    "type": "expression",
+                    "config": {
+                        "source": "result.requires_human_review",
+                        "operator": "equals",
+                        "value": true
+                    }
+                }
+            },
+            {
+                "from": "quality_assessment",
+                "to": "final_processing",
+                "condition": {
+                    "type": "expression",
+                    "config": {
+                        "source": "result.requires_human_review",
+                        "operator": "equals",
+                        "value": false
+                    }
+                }
+            },
+            {
+                "from": "human_review_pause",
+                "to": "manual_enhancement",
+                "condition": {
+                    "type": "expression",
+                    "config": {
+                        "source": "result.decision",
+                        "operator": "equals",
+                        "value": "request_enhancement"
+                    }
+                }
+            },
+            {
+                "from": "human_review_pause",
+                "to": "collaborative_decision",
+                "condition": {
+                    "type": "expression",
+                    "config": {
+                        "source": "result.decision",
+                        "operator": "equals",
+                        "value": "escalate"
+                    }
+                }
+            },
+            {
+                "from": "human_review_pause",
+                "to": "final_processing",
+                "condition": {
+                    "type": "expression",
+                    "config": {
+                        "source": "result.decision",
+                        "operator": "equals",
+                        "value": "approve"
+                    }
+                }
+            },
+            {
+                "from": "manual_enhancement",
+                "to": "final_processing",
+                "condition": {
+                    "type": "always"
+                }
+            },
+            {
+                "from": "collaborative_decision",
+                "to": "final_processing",
+                "condition": {
+                    "type": "always"
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,256 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ia_modules"
+version = "0.3.0"
+description = "AI agent framework"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    {name = "IA Modules Contributors"}
+]
+keywords = [
+    "ai", "agents", "pipeline", "workflow", "orchestration",
+    "reliability", "observability", "earf", "llm"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "pydantic==2.12.5",
+    "nexusql==0.4.0",
+    "beautifulsoup4==4.14.3",
+    # "aiohttp==3.13.3",  # TODO: re-enable after web_scraper refactor
+    "python-dateutil==2.9.0.post0",
+    "httpx==0.28.1",
+    "python-jose[cryptography]==3.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.0.2",
+    "pytest-asyncio==1.3.0",
+    "pytest-cov==7.0.0",
+    "python-dotenv==1.2.1",
+    "build==1.4.3",
+    "psutil==7.2.2",
+    "fastapi==0.128.0",
+    "sqlalchemy==2.1.6",
+]
+redis = [
+    "redis==7.4.0",
+]
+postgres = [
+    "psycopg2-binary==2.9.11",
+]
+mysql = [
+    "pymysql==1.1.2",
+]
+mssql = [
+    "pyodbc==5.3.0",
+]
+sql = [
+    "psycopg2-binary==2.9.11",  # PostgreSQL
+    "pymysql==1.1.2",  # MySQL
+    "pyodbc==5.3.0",  # MSSQL
+]
+observability = [
+    "opentelemetry-api==1.41.0",
+    "opentelemetry-sdk==1.41.0",
+    "opentelemetry-exporter-otlp==1.41.0",
+    "opentelemetry-exporter-prometheus==0.62b0",
+    "opentelemetry-instrumentation==0.62b0",
+    "prometheus-client==0.24.1",
+]
+cli = [
+    "graphviz==0.21",
+    "click==8.3.1",
+]
+profiling = [
+    "psutil==7.2.2",
+]
+# Advanced AI features
+guardrails = [
+    "openai==2.20.0",
+]
+rag-advanced = [
+    "openai==2.20.0",
+    "numpy==2.4.2",
+    "scikit-learn==1.8.0",
+]
+agents-advanced = [
+    "openai==2.20.0",
+    "anthropic==0.94.0",
+    "numpy==2.4.2",
+    "scikit-learn==1.8.0",
+]
+ai-advanced = [
+    "openai==2.20.0",
+    "anthropic==0.94.0",
+    "numpy==2.4.2",
+    "scikit-learn==1.8.0",
+]
+all = [
+    "redis==7.4.0",
+    "psycopg2-binary==2.9.11",
+    "pymysql==1.1.2",
+    "pyodbc==5.3.0",
+    "graphviz==0.21",
+    "click==8.3.1",
+    "psutil==7.2.2",
+    "pytest-cov==7.0.0",
+    "opentelemetry-api==1.41.0",
+    "opentelemetry-sdk==1.41.0",
+    "opentelemetry-exporter-otlp==1.41.0",
+    "opentelemetry-exporter-prometheus==0.62b0",
+    "opentelemetry-instrumentation==0.62b0",
+    "prometheus-client==0.24.1",
+    # Advanced AI features
+    "openai==2.20.0",
+    "anthropic==0.94.0",
+    "numpy==2.4.2",
+    "scikit-learn==1.8.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/matterwaveai/ia_modules"
+Documentation = "https://github.com/matterwaveai/ia_modules#readme"
+Repository = "https://github.com/matterwaveai/ia_modules"
+Issues = "https://github.com/matterwaveai/ia_modules/issues"
+
+[project.scripts]
+ia-modules = "ia_modules.cli.main:main"
+
+[tool.setuptools.packages.find]
+# Find all packages in the current directory
+where = ["."]
+# Exclude test and documentation directories
+exclude = [
+    "tests*",
+    "docs*",
+    "showcase_app*",
+    "benchmarking*",
+    "examples*",
+    "release_notes*",
+    "build*",
+    "dist*",
+    "*.egg-info*",
+]
+
+[tool.setuptools.package-data]
+# Include SQL, JSON, YAML files in all packages
+"*" = ["*.sql", "*.json", "*.yaml", "*.yml"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+filterwarnings = [
+    "ignore:The default datetime adapter is deprecated:DeprecationWarning",
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--import-mode=importlib",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "e2e: marks tests as end-to-end tests",
+    "redis: marks tests that require Redis server",
+    "postgres: marks tests that require PostgreSQL server",
+    "mysql: marks tests that require MySQL server",
+    "mssql: marks tests that require MSSQL server",
+    "observability: marks tests that require observability stack (Prometheus, Grafana, etc)",
+    "disaster_recovery: marks tests for disaster recovery scenarios",
+    "security: marks tests for security testing",
+    "performance: marks tests for performance and load testing",
+]
+
+[tool.coverage.run]
+source = [
+    "ia_modules",
+]
+# Coverage includes all submodules:
+# agents, auth, benchmarking, checkpoint, cli, database,
+# memory, pipeline, plugins, rag, reliability, scheduler,
+# telemetry, tools, validation
+omit = [
+    # Test files and directories
+    "*/tests/*",
+    "*/test_*.py",
+    "*/conftest.py",
+    "tests/*",
+
+    # Build and cache directories
+    "*/__pycache__/*",
+    "*.egg-info/*",
+
+    # Excluded apps and utilities
+    "showcase_app/*",
+    "archive/*",
+    "docs/*",
+    "release_notes/*",
+
+    # Example and manual test scripts
+    "tests/llm_config_example.py",
+    "tests/manual_database_test.py",
+    "tests/pipeline_runner.py",
+    "tests/pipeline_runner_with_llm.py",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.mypy]
+ignore_missing_imports = true
+no_implicit_optional = false
+warn_return_any = false
+warn_unused_ignores = false
+disable_error_code = [
+    "assignment",
+    "arg-type",
+    "return-value",
+    "attr-defined",
+    "union-attr",
+    "call-arg",
+    "index",
+    "operator",
+    "var-annotated",
+    "misc",
+    "no-redef",
+    "override",
+    "method-assign",
+    "import-untyped",
+    "has-type",
+    "call-overload",
+]

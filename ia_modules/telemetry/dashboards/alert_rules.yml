@@ -1,0 +1,124 @@
+# Prometheus Alert Rules for IA Modules
+
+groups:
+  - name: ia_modules_pipelines
+    interval: 30s
+    rules:
+      # High Error Rate
+      - alert: HighPipelineErrorRate
+        expr: |
+          (
+            sum(rate(ia_modules_pipeline_executions_total{status="error"}[5m]))
+            /
+            sum(rate(ia_modules_pipeline_executions_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High pipeline error rate detected"
+          description: "Pipeline error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      # Pipeline Duration Anomaly
+      - alert: PipelineDurationAnomaly
+        expr: |
+          histogram_quantile(0.95, rate(ia_modules_pipeline_duration_seconds_bucket[5m])) > 300
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline execution taking too long"
+          description: "Pipeline {{ $labels.pipeline_name }} P95 duration is {{ $value }}s"
+
+      # High Cost Alert
+      - alert: HighPipelineCost
+        expr: |
+          rate(ia_modules_pipeline_cost_usd_total[1h]) > 10
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pipeline costs are high"
+          description: "Pipeline {{ $labels.pipeline_name }} is costing ${{ $value }}/hour"
+
+      # Low Throughput
+      - alert: LowPipelineThroughput
+        expr: |
+          rate(ia_modules_items_processed_total[10m]) < 100
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline throughput is low"
+          description: "Pipeline {{ $labels.pipeline_name }} throughput is {{ $value }} items/sec"
+
+      # Memory Usage High
+      - alert: HighMemoryUsage
+        expr: |
+          ia_modules_pipeline_memory_bytes > 1e9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline memory usage is high"
+          description: "Pipeline {{ $labels.pipeline_name }} using {{ $value | humanize }}B of memory"
+
+      # No Pipeline Executions
+      - alert: PipelineNotExecuting
+        expr: |
+          absent(ia_modules_pipeline_executions_total) or
+          rate(ia_modules_pipeline_executions_total[15m]) == 0
+        for: 20m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No pipeline executions detected"
+          description: "Pipeline {{ $labels.pipeline_name }} has not executed in 20 minutes"
+
+      # Step Failure Rate
+      - alert: HighStepFailureRate
+        expr: |
+          (
+            sum by (step_name) (rate(ia_modules_step_executions_total{status="error"}[5m]))
+            /
+            sum by (step_name) (rate(ia_modules_step_executions_total[5m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High step failure rate"
+          description: "Step {{ $labels.step_name }} has {{ $value | humanizePercentage }} failure rate"
+
+      # API Rate Limit Approaching
+      - alert: APIRateLimitApproaching
+        expr: |
+          rate(ia_modules_api_calls_total[1m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API rate limit approaching"
+          description: "API calls at {{ $value }}/sec, approaching rate limit"
+
+      # CPU Usage High
+      - alert: HighCPUUsage
+        expr: |
+          ia_modules_pipeline_cpu_percent > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline CPU usage is high"
+          description: "Pipeline {{ $labels.pipeline_name }} using {{ $value }}% CPU"
+
+      # Queue Depth Growing
+      - alert: QueueDepthGrowing
+        expr: |
+          deriv(ia_modules_queue_depth[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Queue depth is growing"
+          description: "Queue depth increasing at {{ $value }} items/sec"

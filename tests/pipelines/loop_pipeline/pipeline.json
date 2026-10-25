@@ -1,0 +1,98 @@
+{
+  "name": "Iterative Content Generation Pipeline",
+  "description": "Example pipeline with loops - generates and iteratively refines content",
+  "version": "1.0",
+  "parameters": [
+    {
+      "name": "topic",
+      "schema": {"type": "string"},
+      "required": true,
+      "description": "The topic to generate content about"
+    },
+    {
+      "name": "max_revisions",
+      "schema": {"type": "integer"},
+      "required": true,
+      "description": "Maximum number of revision iterations"
+    }
+  ],
+  "steps": [
+    {
+      "id": "draft_content",
+      "name": "Draft Content",
+      "step_class": "DraftContentStep",
+      "module": "tests.pipelines.loop_pipeline.steps.draft_content",
+      "inputs": {
+        "topic": "{{ parameters.topic }}"
+      },
+      "outputs": ["draft", "revision_count"]
+    },
+    {
+      "id": "review_content",
+      "name": "Review Content Quality",
+      "step_class": "ReviewContentStep",
+      "module": "tests.pipelines.loop_pipeline.steps.review_content",
+      "inputs": {
+        "draft": "{{ draft_content.draft }}",
+        "revision_count": "{{ draft_content.revision_count }}"
+      },
+      "outputs": ["approved", "feedback", "quality_score"]
+    },
+    {
+      "id": "publish_content",
+      "name": "Publish Final Content",
+      "step_class": "PublishContentStep",
+      "module": "tests.pipelines.loop_pipeline.steps.publish_content",
+      "inputs": {
+        "draft": "{{ draft_content.draft }}",
+        "quality_score": "{{ review_content.quality_score }}"
+      },
+      "outputs": ["published_url", "final_draft"]
+    }
+  ],
+  "flow": {
+    "start_at": "draft_content",
+    "paths": [
+      {
+        "from": "draft_content",
+        "to": "review_content",
+        "condition": {"type": "always"}
+      },
+      {
+        "from": "review_content",
+        "to": "draft_content",
+        "condition": {
+          "type": "expression",
+          "config": {
+            "source": "review_content.approved",
+            "operator": "equals",
+            "value": false
+          }
+        }
+      },
+      {
+        "from": "review_content",
+        "to": "publish_content",
+        "condition": {
+          "type": "expression",
+          "config": {
+            "source": "review_content.approved",
+            "operator": "equals",
+            "value": true
+          }
+        }
+      }
+    ]
+  },
+  "loop_config": {
+    "max_iterations": 5,
+    "max_loop_time_seconds": 300,
+    "iteration_delay_seconds": 1
+  },
+  "outputs": {
+    "final_content": "{{ publish_content.final_draft }}",
+    "published_url": "{{ publish_content.published_url }}",
+    "total_revisions": "{{ draft_content.revision_count }}",
+    "final_quality_score": "{{ review_content.quality_score }}"
+  }
+}

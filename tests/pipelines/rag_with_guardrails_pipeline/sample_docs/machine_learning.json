@@ -1,0 +1,26 @@
+{
+  "title": "Machine Learning Fundamentals",
+  "topics": [
+    {
+      "name": "Supervised Learning",
+      "description": "Learning from labeled data",
+      "algorithms": ["Linear Regression", "Decision Trees", "Random Forest", "SVM"]
+    },
+    {
+      "name": "Unsupervised Learning",
+      "description": "Finding patterns in unlabeled data",
+      "algorithms": ["K-Means", "Hierarchical Clustering", "PCA", "Autoencoders"]
+    },
+    {
+      "name": "Reinforcement Learning",
+      "description": "Learning through trial and error",
+      "algorithms": ["Q-Learning", "Deep Q-Networks", "Policy Gradients", "Actor-Critic"]
+    }
+  ],
+  "key_concepts": {
+    "overfitting": "Model performs well on training data but poorly on new data",
+    "underfitting": "Model is too simple to capture underlying patterns",
+    "bias_variance_tradeoff": "Balance between model simplicity and flexibility",
+    "cross_validation": "Technique to assess model performance on unseen data"
+  }
+}

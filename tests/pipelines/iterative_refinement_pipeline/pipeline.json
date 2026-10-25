@@ -1,0 +1,173 @@
+{
+  "name": "Iterative Refinement Demo",
+  "description": "Demonstrates progressive enhancement pattern where humans iteratively improve results",
+  "version": "1.0.0",
+  "parameters": [
+    {
+      "name": "topic",
+      "schema": {"type": "string"},
+      "required": false,
+      "description": "The topic for the initial draft"
+    }
+  ],
+  "steps": [
+    {
+      "id": "generate_draft",
+      "name": "Generate Initial Draft",
+      "type": "task",
+      "class": "GenerateInitialDraftStep",
+      "module": "steps.refinement_steps",
+      "config": {
+        "description": "Generate an initial draft document"
+      },
+      "inputs": [
+        {"name": "topic", "source": "{parameters.topic}", "required": false}
+      ],
+      "outputs": [
+        {"name": "current_result", "required": true},
+        {"name": "topic", "required": true},
+        {"name": "iteration", "required": true}
+      ]
+    },
+    {
+      "id": "refine_content",
+      "name": "Refine Content",
+      "type": "task",
+      "class": "RefineContentStep",
+      "module": "steps.refinement_steps",
+      "config": {
+        "max_iterations": 3,
+        "prompt": "Please review and refine the content. You can make multiple rounds of improvements."
+      },
+      "inputs": [
+        {"name": "current_result", "source": "{steps.generate_draft.output.current_result}", "required": true},
+        {"name": "iteration", "source": "{steps.generate_draft.output.iteration}", "required": false},
+        {"name": "refinement_history", "source": "{steps.process_refinement.output.refinement_history}", "required": false}
+      ],
+      "outputs": [
+        {"name": "status", "required": true},
+        {"name": "ui_schema", "required": true},
+        {"name": "iteration", "required": true},
+        {"name": "current_result", "required": true},
+        {"name": "refinement_history", "required": true},
+        {"name": "max_iterations", "required": true},
+        {"name": "refined_result", "required": false},
+        {"name": "refinement_notes", "required": false},
+        {"name": "continue_refining", "required": false}
+      ]
+    },
+    {
+      "id": "process_refinement",
+      "name": "Process Refinement Response",
+      "type": "task",
+      "class": "ProcessRefinementStep",
+      "module": "steps.refinement_steps",
+      "config": {
+        "description": "Process the human refinement and decide if more iterations needed"
+      },
+      "inputs": [
+        {"name": "refined_result", "source": "{steps.refine_content.output.refined_result}", "required": false},
+        {"name": "refinement_notes", "source": "{steps.refine_content.output.refinement_notes}", "required": false},
+        {"name": "continue_refining", "source": "{steps.refine_content.output.continue_refining}", "required": false},
+        {"name": "iteration", "source": "{steps.refine_content.output.iteration}", "required": true},
+        {"name": "refinement_history", "source": "{steps.refine_content.output.refinement_history}", "required": true},
+        {"name": "max_iterations", "source": "{steps.refine_content.output.max_iterations}", "required": true}
+      ],
+      "outputs": [
+        {"name": "status", "required": true},
+        {"name": "current_result", "required": false},
+        {"name": "final_result", "required": false},
+        {"name": "iteration", "required": false},
+        {"name": "iterations_completed", "required": false},
+        {"name": "refinement_history", "required": true}
+      ]
+    },
+    {
+      "id": "check_continue",
+      "name": "Check If Continue Refining",
+      "type": "condition",
+      "conditions": [
+        {
+          "field": "status",
+          "operator": "equals",
+          "value": "continue_refinement",
+          "type": "value"
+        }
+      ],
+      "inputs": [
+        {"name": "status", "source": "{steps.process_refinement.output.status}", "required": true}
+      ],
+      "outputs": [
+        {"name": "status", "required": true}
+      ]
+    },
+    {
+      "id": "finalize_document",
+      "name": "Finalize Document",
+      "type": "task",
+      "class": "FinalizeDocumentStep",
+      "module": "steps.refinement_steps",
+      "config": {
+        "description": "Finalize the refined document with metadata"
+      },
+      "inputs": [
+        {"name": "final_result", "source": "{steps.process_refinement.output.final_result}", "required": true},
+        {"name": "iterations_completed", "source": "{steps.process_refinement.output.iterations_completed}", "required": false},
+        {"name": "refinement_history", "source": "{steps.process_refinement.output.refinement_history}", "required": false}
+      ],
+      "outputs": [
+        {"name": "document", "required": true},
+        {"name": "metadata", "required": true},
+        {"name": "status", "required": true}
+      ]
+    }
+  ],
+  "flow": {
+    "start_at": "generate_draft",
+    "paths": [
+      {
+        "from": "generate_draft",
+        "to": "refine_content",
+        "condition": {
+          "type": "always"
+        }
+      },
+      {
+        "from": "refine_content",
+        "to": "process_refinement",
+        "condition": {
+          "type": "always"
+        }
+      },
+      {
+        "from": "process_refinement",
+        "to": "check_continue",
+        "condition": {
+          "type": "always"
+        }
+      },
+      {
+        "from": "check_continue",
+        "to": "refine_content",
+        "condition": {
+          "type": "condition",
+          "description": "Continue refining"
+        }
+      },
+      {
+        "from": "check_continue",
+        "to": "finalize_document",
+        "condition": {
+          "type": "else",
+          "description": "Refinement complete"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "category": "examples",
+    "tags": ["hitl", "iterative", "progressive-enhancement"],
+    "author": "IA Modules",
+    "use_case": "Document refinement with human in the loop"
+  }
+}

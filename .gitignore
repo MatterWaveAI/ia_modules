@@ -1,0 +1,108 @@
+# Dependencies
+**/node_modules/*
+**/.pnp
+.pnp.js
+
+# Testing
+**/coverage/
+
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+!showcase_app/frontend/src/lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+*.cover
+.hypothesis/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Virtual Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Session artifacts (from cleanup)
+archive/
+.aider.*
+COMMIT_MESSAGE_*.md
+*_SUMMARY.md
+*_COMPLETION.md
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+.aider*
+
+# AI/Coder artifacts
+.claude/
+.qwen/
+.cursor/
+.copilot/
+.codeium/
+
+# Showcase app runtime logs
+showcase_app/logs*/
+
+# Generated test output
+tests/pipelines/*/runs/
+showcase_app/playwright-report/
+showcase_app/test-results.json
+test.txt

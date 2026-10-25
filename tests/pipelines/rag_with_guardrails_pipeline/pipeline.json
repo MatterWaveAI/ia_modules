@@ -1,0 +1,253 @@
+{
+    "name": "RAG Pipeline with Guardrails",
+    "description": "Retrieval Augmented Generation with input/output safety guardrails",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "query",
+            "schema": {"type": "string"},
+            "required": true,
+            "description": "User's question to answer using RAG"
+        }
+    ],
+    "steps": [
+        {
+            "id": "input_guardrails",
+            "name": "Input Safety Check",
+            "step_class": "InputGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "content_field": "query",
+                "fail_on_block": true,
+                "redact_pii": true
+            },
+            "inputs": [
+                {
+                    "name": "query",
+                    "source": "{parameters.query}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "query",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "load_documents",
+            "name": "Load Documents",
+            "step_class": "DocumentLoaderStep",
+            "module": "tests.pipelines.rag_with_guardrails_pipeline.steps.document_loader",
+            "config": {
+                "docs_dir": "sample_docs",
+                "file_types": [".txt", ".md", ".json", ".rst"]
+            },
+            "inputs": [
+                {
+                    "name": "query",
+                    "source": "{steps.input_guardrails.output.query}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "documents",
+                    "schema": {"type": "array"},
+                    "required": true
+                },
+                {
+                    "name": "query",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "retrieve",
+            "name": "Retrieve Relevant Documents",
+            "step_class": "SimpleRetrieverStep",
+            "module": "tests.pipelines.rag_with_guardrails_pipeline.steps.simple_retriever",
+            "config": {
+                "query_field": "query",
+                "docs_field": "documents",
+                "top_k": 2
+            },
+            "inputs": [
+                {
+                    "name": "query",
+                    "source": "{steps.load_documents.output.query}",
+                    "schema": {"type": "string"},
+                    "required": true
+                },
+                {
+                    "name": "documents",
+                    "source": "{steps.load_documents.output.documents}",
+                    "schema": {"type": "array"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "retrieved_docs",
+                    "schema": {"type": "array"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "retrieval_guardrails",
+            "name": "Retrieval Safety Check",
+            "step_class": "RetrievalGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "docs_field": "retrieved_docs",
+                "max_doc_length": 5000
+            },
+            "inputs": [
+                {
+                    "name": "retrieved_docs",
+                    "source": "{steps.retrieve.output.retrieved_docs}",
+                    "schema": {"type": "array"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "retrieved_docs",
+                    "schema": {"type": "array"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "build_context",
+            "name": "Build Context",
+            "step_class": "ContextBuilderStep",
+            "module": "tests.pipelines.rag_with_guardrails_pipeline.steps.context_builder",
+            "config": {
+                "docs_field": "retrieved_docs",
+                "max_length": 3000
+            },
+            "inputs": [
+                {
+                    "name": "retrieved_docs",
+                    "source": "{steps.retrieval_guardrails.output.retrieved_docs}",
+                    "schema": {"type": "array"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "context",
+                    "schema": {"type": "string"},
+                    "required": true
+                },
+                {
+                    "name": "query",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "rag_llm",
+            "name": "Generate Answer",
+            "step_class": "RAGLLMStep",
+            "module": "tests.pipelines.rag_with_guardrails_pipeline.steps.rag_llm_step",
+            "config": {
+                "query_field": "query",
+                "context_field": "context",
+                "output_field": "answer",
+                "temperature": 0.7,
+                "max_tokens": 500
+            },
+            "inputs": [
+                {
+                    "name": "query",
+                    "source": "{steps.build_context.output.query}",
+                    "schema": {"type": "string"},
+                    "required": true
+                },
+                {
+                    "name": "context",
+                    "source": "{steps.build_context.output.context}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "answer",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        },
+        {
+            "id": "output_guardrails",
+            "name": "Output Safety Check",
+            "step_class": "OutputGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "content_field": "answer",
+                "fail_on_block": true,
+                "max_length": 1000
+            },
+            "inputs": [
+                {
+                    "name": "answer",
+                    "source": "{steps.rag_llm.output.answer}",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "answer",
+                    "schema": {"type": "string"},
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "input_guardrails",
+        "paths": [
+            {
+                "from_step": "input_guardrails",
+                "to_step": "load_documents",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "load_documents",
+                "to_step": "retrieve",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "retrieve",
+                "to_step": "retrieval_guardrails",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "retrieval_guardrails",
+                "to_step": "build_context",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "build_context",
+                "to_step": "rag_llm",
+                "condition": {"type": "always"}
+            },
+            {
+                "from_step": "rag_llm",
+                "to_step": "output_guardrails",
+                "condition": {"type": "always"}
+            }
+        ]
+    }
+}

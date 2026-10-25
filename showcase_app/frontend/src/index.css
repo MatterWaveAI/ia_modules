@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    /* Global font size baseline — 80% of default (16px → 12.8px).
+       Tailwind uses rem, so every text-* and spacing class scales proportionally. */
+    font-size: 80%;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', source-code-pro, Menlo, Monaco, Consolas, monospace;
+  }
+
+  /* Smoother scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+@layer components {
+  /* Modern card with subtle border + soft shadow */
+  .card {
+    @apply bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800/60;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+  .card:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Glass card variant */
+  .card-glass {
+    @apply rounded-2xl border border-white/20 dark:border-gray-700/40 backdrop-blur-xl;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+  .dark .card-glass {
+    background: rgba(17, 24, 39, 0.7);
+  }
+
+  /* Section heading style */
+  .section-heading {
+    @apply text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100;
+  }
+}
+
+/* ── gantt-task-react dark mode overrides ── */
+.dark ._2dZTy {
+  fill: #111827;            /* grid row (odd) → gray-900 */
+}
+.dark ._2dZTy:nth-child(even) {
+  fill: #1f2937;            /* grid row (even) → gray-800 */
+}
+.dark ._3rUKi {
+  stroke: #374151;          /* grid row lines → gray-700 */
+}
+.dark ._RuwuK {
+  stroke: #374151;          /* grid ticks → gray-700 */
+}
+.dark ._35nLX {
+  fill: #1f2937;            /* calendar header bg → gray-800 */
+  stroke: #374151;          /* calendar header border → gray-700 */
+}
+.dark ._9w8d5 {
+  fill: #d1d5db;            /* calendar bottom text → gray-300 */
+}
+.dark ._2q1Kt {
+  fill: #d1d5db;            /* calendar top text → gray-300 */
+}
+.dark ._1rLuZ {
+  stroke: #374151;          /* calendar top tick → gray-700 */
+}
+.dark ._3KcaM {
+  fill: #d1d5db;            /* task list text → gray-300 */
+}
+.dark ._3w_5u {
+  fill: #6b7280;            /* bar handle → gray-500 */
+}
+.dark ._3T42e {
+  background: #1f2937;      /* tooltip bg → gray-800 */
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+.dark ._29NTg {
+  color: #9ca3af;           /* tooltip text → gray-400 */
+}
+.dark ._3_ygE {
+  border-color: #374151;    /* task list table borders → gray-700 */
+}
+.dark ._3ZbQT {
+  border-color: #374151;    /* task list wrapper borders → gray-700 */
+}
+.dark ._34SS0:nth-of-type(even) {
+  background-color: #1f2937; /* task list row (even) → gray-800 */
+}
+.dark ._2eZzQ {
+  border-color: #4b5563;    /* task list cell divider → gray-600 */
+}
+.dark ._2QjE6 {
+  color: #9ca3af;           /* task list expander text → gray-400 */
+}
+.dark ._2TfEi {
+  color: #d1d5db;           /* task list cell text → gray-300 */
+}
+.dark ._3lLk3 {
+  color: #d1d5db;           /* task list cell (name, dates) → gray-300 */
+}
+.dark ._WuQ0f {
+  color: #9ca3af;           /* task list header cells → gray-400 */
+}
+.dark ._34SS0 {
+  color: #d1d5db;           /* task list row text → gray-300 */
+}
+.dark ._nI1Xw {
+  color: #d1d5db;           /* task name wrapper → gray-300 */
+}

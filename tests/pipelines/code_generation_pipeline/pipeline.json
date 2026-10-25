@@ -1,0 +1,108 @@
+{
+    "name": "Code Generation Pipeline",
+    "description": "AI-powered code generation with guardrails",
+    "version": "1.0.0",
+    "parameters": [
+        {
+            "name": "task",
+            "schema": {"type": "string"},
+            "required": true,
+            "description": "Description of code to generate"
+        },
+        {
+            "name": "filename",
+            "schema": {"type": "string"},
+            "required": false,
+            "default": "generated.py",
+            "description": "Output filename"
+        }
+    ],
+    "steps": [
+        {
+            "id": "input_guardrails",
+            "name": "Input Safety Check",
+            "step_class": "InputGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "content_field": "task",
+                "fail_on_block": true
+            },
+            "inputs": [
+                {"name": "task", "source": "{parameters.task}", "required": true}
+            ],
+            "outputs": [
+                {"name": "task", "required": true},
+                {"name": "input_guardrails_result", "required": true}
+            ]
+        },
+        {
+            "id": "generate_code",
+            "name": "Generate Code",
+            "step_class": "CodeGeneratorStep",
+            "module": "tests.pipelines.code_generation_pipeline.steps.code_generator_step",
+            "config": {
+                "temperature": 0.3,
+                "max_tokens": 2000
+            },
+            "inputs": [
+                {"name": "task", "source": "{steps.input_guardrails.output.task}", "required": true}
+            ],
+            "outputs": [
+                {"name": "generated_code", "required": true},
+                {"name": "raw_response", "required": true},
+                {"name": "llm_metadata", "required": true}
+            ]
+        },
+        {
+            "id": "execution_guardrails",
+            "name": "Code Safety Check",
+            "step_class": "ExecutionGuardrailStep",
+            "module": "ia_modules.guardrails.pipeline_steps",
+            "config": {
+                "code_field": "generated_code",
+                "fail_on_block": true
+            },
+            "inputs": [
+                {"name": "generated_code", "source": "{steps.generate_code.output.generated_code}", "required": true}
+            ],
+            "outputs": [
+                {"name": "generated_code", "required": true},
+                {"name": "execution_guardrails_result", "required": true}
+            ]
+        },
+        {
+            "id": "write_code",
+            "name": "Write Code to File",
+            "step_class": "CodeWriterStep",
+            "module": "tests.pipelines.code_generation_pipeline.steps.code_writer_step",
+            "config": {
+                "output_dir": "generated_code"
+            },
+            "inputs": [
+                {"name": "generated_code", "source": "{steps.execution_guardrails.output.generated_code}", "required": true},
+                {"name": "filename", "source": "{parameters.filename}", "required": false}
+            ],
+            "outputs": [
+                {"name": "output_file", "required": true},
+                {"name": "code_size", "required": true}
+            ]
+        }
+    ],
+    "flow": {
+        "start_at": "input_guardrails",
+        "paths": [
+            {
+                "from_step": "input_guardrails",
+                "to_step": "generate_code"
+            },
+            {
+                "from_step": "generate_code",
+                "to_step": "execution_guardrails"
+            },
+            {
+                "from_step": "execution_guardrails",
+                "to_step": "write_code"
+            }
+        ]
+    }
+}
