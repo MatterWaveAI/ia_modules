@@ -5,6 +5,72 @@ All notable changes to IA Modules will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-10-31
+
+### 🚀 Major Features
+
+**Runner Entrypoint (`ia-runner`)** — agent-command-center spec T-003
+- New `ia_modules.runner` subpackage and `ia-runner` console script: run ONE
+  pipeline from a bundle file and exit — the exit code is the outcome
+  (`0` success, `1` failure, `2` usage error)
+- `--pipeline <file.yaml|.yml|.json>` accepts the bundle pipeline schema
+  (name / execution / steps / flow / error_handling, as the fiber-apps
+  pipelines use); `--input`, `--working-dir` (for step module imports) and
+  `--output` (result JSON file, default stdout) round out the args
+- Storage from env: `IA_MODULES_DB_URL` or the `IA_MODULES_DB_HOST/_PORT/
+  _USER/_PASSWORD/_NAME` parts → nexusql; ia_modules' own migrations apply
+  on start, so `pipeline_checkpoints` exists before the run
+- Checkpoint-resume on retry: with `IA_RUN_ID` set and a checkpoint already
+  stored for it, the run resumes from the last checkpoint instead of
+  starting over — what a retried k8s Job (backoffLimit) leans on; a
+  completed run id retries idempotently, and an unset `IA_RUN_ID` means a
+  fresh, unresumable run
+- A `waiting_for_human` pause exits `0` (controlled pause, not a failure);
+  storage that cannot initialize fails the run (`1`) — exactly the case a
+  Job should retry on
+- `--version` prints the package version — the runner image's HEALTHCHECK probe
+
+### 🔧 CI/CD
+
+**Runner image & release pipeline**
+- `docker/Dockerfile`: `python:3.11-slim`, non-root `runner` user, installs
+  the package with the `postgres` extra (nexusql pinned `==0.4.0` comes from
+  core deps), `ENTRYPOINT ["ia-runner"]`, HEALTHCHECK via `--version`
+- `docker/smoke/`: a two-step smoke pipeline (marker-stamp echo + pass-through
+  verify) the release CI runs inside the image against a service Postgres:
+  first attempt fails after the first checkpoint, the retry with the same
+  `IA_RUN_ID` must resume — proven by the first attempt's marker surviving
+  in the output
+- `.github/workflows/release-image.yml`: on `v*` tags — unit gate, the
+  checkpoint-resume smoke test, then build & push to
+  `ghcr.io/matterwaveai/agent-runner` (semver + latest tags, GHA cache)
+
+### 🧪 Testing
+
+- New `tests/unit/test_runner_entrypoint.py` (25 tests): pipeline loading
+  (YAML/JSON/usage errors), the exit-code contract, env→URL assembly, and
+  the fail-then-retry resume story over `SQLCheckpointer` with SQLite files
+- New `tests/integration/test_runner_postgres.py`: the same resume story
+  against a real PostgreSQL (`postgres` + `integration` markers, skipped
+  unless `TEST_POSTGRESQL_URL` is reachable — same pattern as the Redis
+  integration tests; compose file serves it on port 15432)
+
+### 📖 Documentation
+
+- Runner contract (args, env, exit codes) documented in
+  `ia_modules/runner/main.py`; the Dockerfile and smoke steps carry the
+  platform context (one image, three k8s wrappers; T-003)
+
+### ⚠️ Notes
+
+- New core dependency: `pyyaml==6.0.3` (bundle pipelines arrive as YAML)
+- The bundle schema's `execution` (timeout, max_retries) and
+  `error_handling` (on_step_failure) fields ride along; the engine still
+  applies timeout/retry per-step, not per-pipeline
+- No breaking changes; the existing `ia-modules` CLI is untouched
+
+---
+
 ## [0.2.0] - 2026-04-09
 
 ### 🚀 Major Features
