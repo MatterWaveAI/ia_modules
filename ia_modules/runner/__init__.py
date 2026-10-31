@@ -8,6 +8,12 @@ resumes from the last checkpoint when retried with the same run id.
 
     ia-runner --pipeline chat_pipeline.yaml
 
+Environment: `IA_RUN_ID` names the run (checkpoint thread); `IA_RUN_ACTOR`
+names who triggered it -- the dispatcher sets it from the console session's
+subject claim, and a scheduler-triggered run names its service identity
+(default `svc:ia-runner`). Storage comes from `IA_MODULES_DB_URL` or the
+`IA_MODULES_DB_HOST/_PORT/_USER/_PASSWORD/_NAME` parts.
+
 Console script: `ia-runner` (see [project.scripts] in pyproject.toml).
 The runner image and its release CI live in `docker/` and
 `.github/workflows/release-image.yml`.

@@ -261,6 +261,10 @@ async def _run(args: argparse.Namespace) -> int:
         checkpointer = None
 
     pipeline = create_pipeline_from_json(config, services, input_data=input_data)
+    # The run's actor: the dispatcher sets IA_RUN_ACTOR from the console
+    # session's subject claim; a scheduler-triggered run names its service
+    # identity instead. Never a hardcoded person.
+    actor = os.environ.get("IA_RUN_ACTOR") or "svc:ia-runner"
 
     # Resume when a checkpoint exists for this run id; start fresh otherwise.
     existing = await checkpointer.load_checkpoint(run_id) if checkpointer else None
@@ -271,10 +275,11 @@ async def _run(args: argparse.Namespace) -> int:
         )
         result = await pipeline.resume(thread_id=run_id)
     else:
+        logger.info("Run %s: fresh start (actor '%s')", run_id, actor)
         context = ExecutionContext(
             execution_id=run_id,
             pipeline_id=config.get('name'),
-            user_id='ia-runner',
+            user_id=actor,
         )
         result = await pipeline.run(input_data, context, thread_id=run_id)
 

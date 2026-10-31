@@ -326,6 +326,35 @@ class TestExitCodes:
         assert any("NOT" in r.message and "checkpoint" in r.message
                    for r in caplog.records)
 
+    def test_actor_defaults_to_the_service_identity(
+        self, no_runner_env, tmp_path, caplog
+    ):
+        """No IA_RUN_ACTOR: the run names its service identity, not a person"""
+        path = write_pipeline_bundle(tmp_path)
+        with caplog.at_level("INFO", logger="ia_modules.runner"):
+            code = runner_main([
+                '--pipeline', str(path),
+                '--working-dir', str(tmp_path),
+            ])
+        assert code == EXIT_OK
+        assert any("svc:ia-runner" in r.message and "actor" in r.message
+                   for r in caplog.records)
+
+    def test_actor_env_names_the_triggering_user(
+        self, no_runner_env, monkeypatch, tmp_path, caplog
+    ):
+        """IA_RUN_ACTOR carries the console session's subject claim through"""
+        monkeypatch.setenv("IA_RUN_ACTOR", "usr_dave")
+        path = write_pipeline_bundle(tmp_path)
+        with caplog.at_level("INFO", logger="ia_modules.runner"):
+            code = runner_main([
+                '--pipeline', str(path),
+                '--working-dir', str(tmp_path),
+            ])
+        assert code == EXIT_OK
+        assert any("usr_dave" in r.message and "actor" in r.message
+                   for r in caplog.records)
+
 
 class TestResumeFromCheckpoint:
     """Test checkpoint-resume on retry over SQLCheckpointer + SQLite file"""
