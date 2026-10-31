@@ -1,10 +1,10 @@
 """Critic Agent - Provides feedback using Reflection pattern"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class CriticAgentStep(PipelineStep):
+class CriticAgentStep(Step):
     """
     Agent that critiques execution results and provides improvement feedback.
     Uses the Reflection pattern for self-critique.

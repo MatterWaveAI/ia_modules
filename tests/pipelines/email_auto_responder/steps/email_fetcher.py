@@ -1,11 +1,11 @@
 """Email Fetcher Step - Fetches emails from various sources"""
 
 from typing import Dict, Any, Optional, List
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 import json
 
 
-class EmailFetcherStep(PipelineStep):
+class EmailFetcherStep(Step):
     """
     Fetches emails from various sources:
     - IMAP/Gmail

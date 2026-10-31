@@ -1,10 +1,10 @@
 """Synthesis Agent - Combines all agent insights into final output"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class SynthesisAgentStep(PipelineStep):
+class SynthesisAgentStep(Step):
     """
     Final agent that synthesizes all collaboration results into
     a comprehensive output with full context.

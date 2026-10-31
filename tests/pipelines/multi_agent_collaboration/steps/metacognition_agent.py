@@ -1,10 +1,10 @@
 """Metacognition Agent - Analyzes collaboration effectiveness"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class MetacognitionAgentStep(PipelineStep):
+class MetacognitionAgentStep(Step):
     """
     Agent that monitors the collaboration process and suggests strategy adjustments.
     Uses the Metacognition pattern to analyze execution patterns.

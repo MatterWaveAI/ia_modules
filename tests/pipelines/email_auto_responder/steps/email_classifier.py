@@ -1,10 +1,10 @@
 """Email Classification Step - Classifies incoming emails by priority and type"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class EmailClassifierStep(PipelineStep):
+class EmailClassifierStep(Step):
     """
     Classifies emails into categories: urgent, normal, spam, automated
     Also extracts key information like sender, subject, sentiment

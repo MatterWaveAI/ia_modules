@@ -1,10 +1,10 @@
 """Planning Agent - Creates execution plans using the Planning pattern"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class PlanningAgentStep(PipelineStep):
+class PlanningAgentStep(Step):
     """
     Agent that creates detailed execution plans.
     Uses the Planning agentic pattern to decompose goals.

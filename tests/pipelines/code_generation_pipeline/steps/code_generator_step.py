@@ -1,108 +1,85 @@
-"""Code generator step using LLM."""
-from typing import Dict, Any
-from ia_modules.pipeline.core import Step
+"""Code generator step: an LLM writes the code, through a CLI agent."""
+from typing import Any, Dict
+
+from ia_modules.pipeline.llm_config import get_agent_config, get_llm_config
+from ia_modules.pipeline.llm_step import LLMStep
+
+_SYSTEM_PROMPT = (
+    "You are an expert Python developer. Write clean, readable, documented code "
+    "with type hints and error handling, following PEP 8. Respond with ONLY the "
+    "code, wrapped in a ```python code block."
+)
 
 
-class CodeGeneratorStep(Step):
-    """Generate code using LLM."""
+class CodeGeneratorStep(LLMStep):
+    """Generate code for the task in the input.
+
+    Config: temperature, max_tokens (passed to the agent). Output: generated_code,
+    raw_response, llm_metadata.
+    """
 
     def __init__(self, name: str, config: Dict[str, Any]):
-        super().__init__(name, config)
-        self.temperature = config.get("temperature", 0.3)
-        self.max_tokens = config.get("max_tokens", 2000)
+        env_config = get_llm_config()
+        agent_cfg = get_agent_config()
+        merged = {
+            **config,
+            "system_prompt": _SYSTEM_PROMPT,
+            "cwd": agent_cfg["cwd"],
+            "logs_dir": agent_cfg["logs_dir"],
+            "timeout_seconds": agent_cfg["timeout_seconds"],
+            **env_config,
+        }
+        super().__init__(name, merged)
 
     async def run(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate code based on task description."""
-        llm_service = self.services.get('llm_provider')
-        if not llm_service:
-            raise RuntimeError("LLM service not registered")
-
         task = data.get("task", "")
         context = data.get("context", "")
+        if not self.agent_available:
+            return self._without_agent(task)
 
-        # Build code generation prompt
-        prompt = self._build_prompt(task, context)
-
-        self.logger.info(f"Generating code for task: {task[:50]}...")
-
-        # Generate code
-        response = await llm_service.generate_completion(
-            prompt=prompt,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens
-        )
-
-        # Extract code from response
-        code = self._extract_code(response.content)
-
+        llm_input: Dict[str, Any] = {"prompt": self._build_prompt(task, context)}
+        if "_execution_id" in data:
+            llm_input["_execution_id"] = data["_execution_id"]
+        llm_result = await super().run(llm_input)
+        raw = llm_result.get("text", "")
+        code = self._extract_code(raw)
         self.logger.info(f"Generated {len(code)} characters of code")
-
-        data["generated_code"] = code
-        data["raw_response"] = response.content
-        data["llm_metadata"] = {
-            "provider": response.provider.value,
-            "model": response.model,
-            "usage": response.usage,
-            "timestamp": response.timestamp.isoformat()
+        return {
+            "generated_code": code,
+            "raw_response": raw,
+            "llm_metadata": {
+                "agent_job_id": llm_result.get("agent_job_id"),
+                "event_count": llm_result.get("event_count", 0),
+            },
         }
 
-        return data
+    # Without a registered agent executor (pytest, the bare CLI) the step emits a
+    # stub with the task recorded in it, so the guardrail and writer steps still run.
+    def _without_agent(self, task: str) -> Dict[str, Any]:
+        summary = " ".join(task.split())[:120] or "the requested task"
+        code = (
+            f'"""{summary}"""\n\n\n'
+            "def solution():\n"
+            '    """Placeholder: no agent executor was registered when this ran."""\n'
+            "    return None\n"
+        )
+        return {
+            "generated_code": code,
+            "raw_response": code,
+            "llm_metadata": {"agent_job_id": None, "event_count": 0, "note": "stub; no agent executor"},
+        }
 
-    def _build_prompt(self, task: str, context: str) -> str:
-        """Build code generation prompt."""
+    @staticmethod
+    def _build_prompt(task: str, context: str) -> str:
         if context:
-            prompt = f"""You are an expert Python developer. Generate clean, well-documented code for the following task.
+            return f"Context (existing code):\n```python\n{context}\n```\n\nTask: {task}"
+        return f"Task: {task}"
 
-Context (existing code):
-```python
-{context}
-```
-
-Task: {task}
-
-Requirements:
-- Write clean, readable Python code
-- Include docstrings
-- Follow PEP 8 style guidelines
-- Add type hints
-- Include error handling where appropriate
-
-Respond with ONLY the code, wrapped in ```python code blocks.
-
-Generated code:"""
-        else:
-            prompt = f"""You are an expert Python developer. Generate clean, well-documented code for the following task.
-
-Task: {task}
-
-Requirements:
-- Write clean, readable Python code
-- Include docstrings
-- Follow PEP 8 style guidelines
-- Add type hints
-- Include error handling where appropriate
-
-Respond with ONLY the code, wrapped in ```python code blocks.
-
-Generated code:"""
-
-        return prompt
-
-    def _extract_code(self, response: str) -> str:
-        """Extract code from LLM response."""
-        # Look for code blocks
+    @staticmethod
+    def _extract_code(response: str) -> str:
+        """The code inside the first ```python (or ```) block, else the whole response."""
         if "```python" in response:
-            # Extract from python code block
-            parts = response.split("```python")
-            if len(parts) > 1:
-                code_part = parts[1].split("```")[0]
-                return code_part.strip()
-
+            return response.split("```python", 1)[1].split("```", 1)[0].strip()
         if "```" in response:
-            # Extract from generic code block
-            parts = response.split("```")
-            if len(parts) > 1:
-                return parts[1].strip()
-
-        # Return full response if no code blocks found
+            return response.split("```", 2)[1].strip()
         return response.strip()

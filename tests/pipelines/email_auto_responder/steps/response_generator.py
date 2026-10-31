@@ -1,10 +1,10 @@
 """Response Generation Step - Generates appropriate email responses"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class ResponseGeneratorStep(PipelineStep):
+class ResponseGeneratorStep(Step):
     """
     Generates contextually appropriate email responses based on
     classification and content analysis

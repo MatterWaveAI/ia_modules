@@ -1,10 +1,10 @@
 """Execution Agent - Implements the plan using Tool Use pattern"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class ExecutionAgentStep(PipelineStep):
+class ExecutionAgentStep(Step):
     """
     Agent that executes the plan created by the planning agent.
     Uses the Tool Use pattern to select and apply appropriate tools.

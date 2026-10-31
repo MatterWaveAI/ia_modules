@@ -1,10 +1,10 @@
 """Batch Processor Step - Processes multiple emails in batch"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class BatchProcessorStep(PipelineStep):
+class BatchProcessorStep(Step):
     """
     Processes multiple emails in batch, applying classification
     and response generation to each email

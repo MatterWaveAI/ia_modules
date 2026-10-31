@@ -5,16 +5,28 @@
     "parameters": [
         {
             "name": "task",
-            "schema": {"type": "string"},
+            "schema": {
+                "type": "string"
+            },
             "required": true,
             "description": "Description of code to generate"
         },
         {
             "name": "filename",
-            "schema": {"type": "string"},
+            "schema": {
+                "type": "string"
+            },
             "required": false,
             "default": "generated.py",
             "description": "Output filename"
+        },
+        {
+            "name": "output_dir",
+            "schema": {
+                "type": "string"
+            },
+            "required": false,
+            "description": "Where write_code puts the file (default: the example's generated_code folder)"
         }
     ],
     "steps": [
@@ -28,11 +40,21 @@
                 "fail_on_block": true
             },
             "inputs": [
-                {"name": "task", "source": "{parameters.task}", "required": true}
+                {
+                    "name": "task",
+                    "source": "{parameters.task}",
+                    "required": true
+                }
             ],
             "outputs": [
-                {"name": "task", "required": true},
-                {"name": "input_guardrails_result", "required": true}
+                {
+                    "name": "task",
+                    "required": true
+                },
+                {
+                    "name": "input_guardrails_result",
+                    "required": true
+                }
             ]
         },
         {
@@ -45,12 +67,25 @@
                 "max_tokens": 2000
             },
             "inputs": [
-                {"name": "task", "source": "{steps.input_guardrails.output.task}", "required": true}
+                {
+                    "name": "task",
+                    "source": "{steps.input_guardrails.output.task}",
+                    "required": true
+                }
             ],
             "outputs": [
-                {"name": "generated_code", "required": true},
-                {"name": "raw_response", "required": true},
-                {"name": "llm_metadata", "required": true}
+                {
+                    "name": "generated_code",
+                    "required": true
+                },
+                {
+                    "name": "raw_response",
+                    "required": true
+                },
+                {
+                    "name": "llm_metadata",
+                    "required": true
+                }
             ]
         },
         {
@@ -63,11 +98,21 @@
                 "fail_on_block": true
             },
             "inputs": [
-                {"name": "generated_code", "source": "{steps.generate_code.output.generated_code}", "required": true}
+                {
+                    "name": "generated_code",
+                    "source": "{steps.generate_code.output.generated_code}",
+                    "required": true
+                }
             ],
             "outputs": [
-                {"name": "generated_code", "required": true},
-                {"name": "execution_guardrails_result", "required": true}
+                {
+                    "name": "generated_code",
+                    "required": true
+                },
+                {
+                    "name": "execution_guardrails_result",
+                    "required": true
+                }
             ]
         },
         {
@@ -79,12 +124,26 @@
                 "output_dir": "generated_code"
             },
             "inputs": [
-                {"name": "generated_code", "source": "{steps.execution_guardrails.output.generated_code}", "required": true},
-                {"name": "filename", "source": "{parameters.filename}", "required": false}
+                {
+                    "name": "generated_code",
+                    "source": "{steps.execution_guardrails.output.generated_code}",
+                    "required": true
+                },
+                {
+                    "name": "filename",
+                    "source": "{parameters.filename}",
+                    "required": false
+                }
             ],
             "outputs": [
-                {"name": "output_file", "required": true},
-                {"name": "code_size", "required": true}
+                {
+                    "name": "output_file",
+                    "required": true
+                },
+                {
+                    "name": "code_size",
+                    "required": true
+                }
             ]
         }
     ],

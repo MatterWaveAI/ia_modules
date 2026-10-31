@@ -1,10 +1,10 @@
 """Iteration Decision Step - Decides whether to continue iterating"""
 
 from typing import Dict, Any, Optional
-from ia_modules.pipeline.core import PipelineStep
+from ia_modules.pipeline.core import Step
 
 
-class IterationDecisionStep(PipelineStep):
+class IterationDecisionStep(Step):
     """
     Decides whether another iteration is needed based on quality score
     and max iterations limit.

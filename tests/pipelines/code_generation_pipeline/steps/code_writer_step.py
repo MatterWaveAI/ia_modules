@@ -20,9 +20,10 @@ class CodeWriterStep(Step):
             self.logger.warning("No code to write")
             return data
 
-        # Get output directory relative to pipeline
-        pipeline_dir = Path(__file__).parent.parent
-        output_path = pipeline_dir / self.output_dir
+        # The output_dir parameter overrides the config; a relative directory
+        # is taken against the pipeline's own folder
+        output_dir = Path(data.get("output_dir") or self.output_dir)
+        output_path = output_dir if output_dir.is_absolute() else Path(__file__).parent.parent / output_dir
         output_path.mkdir(parents=True, exist_ok=True)
 
         # Write code file

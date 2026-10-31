@@ -5,13 +5,17 @@
     "parameters": [
         {
             "name": "task",
-            "schema": {"type": "string"},
+            "schema": {
+                "type": "string"
+            },
             "required": true,
             "description": "The high-level task to accomplish"
         },
         {
             "name": "max_iterations",
-            "schema": {"type": "integer"},
+            "schema": {
+                "type": "integer"
+            },
             "required": false,
             "default": 3,
             "description": "Maximum number of collaboration iterations"
@@ -28,17 +32,49 @@
                 "role": "Create detailed execution plans"
             },
             "inputs": [
-                {"name": "task", "source": "{parameters.task}", "required": true},
-                {"name": "max_iterations", "source": "{parameters.max_iterations}", "required": false},
-                {"name": "iteration", "source": "{steps.decide_continue.output.iteration}", "required": false},
-                {"name": "feedback", "source": "{steps.critic.output.feedback}", "required": false},
-                {"name": "strategy_adjustments", "source": "{steps.metacognition.output.strategy_adjustments}", "required": false}
+                {
+                    "name": "task",
+                    "source": "{parameters.task}",
+                    "required": true
+                },
+                {
+                    "name": "max_iterations",
+                    "source": "{parameters.max_iterations}",
+                    "required": false
+                },
+                {
+                    "name": "iteration",
+                    "source": "{steps.decide_continue.output.iteration}",
+                    "required": false
+                },
+                {
+                    "name": "feedback",
+                    "source": "{steps.critic.output.feedback}",
+                    "required": false
+                },
+                {
+                    "name": "strategy_adjustments",
+                    "source": "{steps.metacognition.output.strategy_adjustments}",
+                    "required": false
+                }
             ],
             "outputs": [
-                {"name": "plan", "required": true},
-                {"name": "current_step", "required": true},
-                {"name": "iteration", "required": true},
-                {"name": "execution_history", "required": true}
+                {
+                    "name": "plan",
+                    "required": true
+                },
+                {
+                    "name": "current_step",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "required": true
+                },
+                {
+                    "name": "execution_history",
+                    "required": true
+                }
             ]
         },
         {
@@ -51,17 +87,48 @@
                 "role": "Execute the plan steps"
             },
             "inputs": [
-                {"name": "plan", "source": "{steps.planner.output.plan}", "required": true},
-                {"name": "task", "source": "{parameters.task}", "required": true},
-                {"name": "iteration", "source": "{steps.planner.output.iteration}", "required": true},
-                {"name": "execution_history", "source": "{steps.planner.output.execution_history}", "required": true}
+                {
+                    "name": "plan",
+                    "source": "{steps.planner.output.plan}",
+                    "required": true
+                },
+                {
+                    "name": "task",
+                    "source": "{parameters.task}",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "source": "{steps.planner.output.iteration}",
+                    "required": true
+                },
+                {
+                    "name": "execution_history",
+                    "source": "{steps.planner.output.execution_history}",
+                    "required": true
+                }
             ],
             "outputs": [
-                {"name": "execution_result", "required": true},
-                {"name": "current_step", "required": true},
-                {"name": "output", "required": true},
-                {"name": "iteration", "required": true},
-                {"name": "execution_history", "required": true}
+                {
+                    "name": "execution_result",
+                    "required": true
+                },
+                {
+                    "name": "current_step",
+                    "required": true
+                },
+                {
+                    "name": "output",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "required": true
+                },
+                {
+                    "name": "execution_history",
+                    "required": true
+                }
             ]
         },
         {
@@ -74,20 +141,61 @@
                 "role": "Critique and provide improvement feedback"
             },
             "inputs": [
-                {"name": "execution_result", "source": "{steps.executor.output.execution_result}", "required": true},
-                {"name": "output", "source": "{steps.executor.output.output}", "required": true},
-                {"name": "iteration", "source": "{steps.executor.output.iteration}", "required": true},
-                {"name": "task", "source": "{parameters.task}", "required": true},
-                {"name": "execution_history", "source": "{steps.executor.output.execution_history}", "required": true}
+                {
+                    "name": "execution_result",
+                    "source": "{steps.executor.output.execution_result}",
+                    "required": true
+                },
+                {
+                    "name": "output",
+                    "source": "{steps.executor.output.output}",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "source": "{steps.executor.output.iteration}",
+                    "required": true
+                },
+                {
+                    "name": "task",
+                    "source": "{parameters.task}",
+                    "required": true
+                },
+                {
+                    "name": "execution_history",
+                    "source": "{steps.executor.output.execution_history}",
+                    "required": true
+                }
             ],
             "outputs": [
-                {"name": "critique", "required": true},
-                {"name": "current_step", "required": true},
-                {"name": "quality_score", "required": true},
-                {"name": "feedback", "required": true},
-                {"name": "improvements", "required": true},
-                {"name": "iteration", "required": true},
-                {"name": "execution_history", "required": true}
+                {
+                    "name": "critique",
+                    "required": true
+                },
+                {
+                    "name": "current_step",
+                    "required": true
+                },
+                {
+                    "name": "quality_score",
+                    "required": true
+                },
+                {
+                    "name": "feedback",
+                    "required": true
+                },
+                {
+                    "name": "improvements",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "required": true
+                },
+                {
+                    "name": "execution_history",
+                    "required": true
+                }
             ]
         },
         {
@@ -100,20 +208,60 @@
                 "role": "Analyze collaboration effectiveness and adjust strategy"
             },
             "inputs": [
-                {"name": "execution_history", "source": "{steps.critic.output.execution_history}", "required": true},
-                {"name": "iteration", "source": "{steps.critic.output.iteration}", "required": true},
-                {"name": "quality_score", "source": "{steps.critic.output.quality_score}", "required": true},
-                {"name": "previous_quality_score", "source": "{steps.metacognition.output.previous_quality_score}", "required": false}
+                {
+                    "name": "execution_history",
+                    "source": "{steps.critic.output.execution_history}",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "source": "{steps.critic.output.iteration}",
+                    "required": true
+                },
+                {
+                    "name": "quality_score",
+                    "source": "{steps.critic.output.quality_score}",
+                    "required": true
+                },
+                {
+                    "name": "previous_quality_score",
+                    "source": "{steps.metacognition.output.previous_quality_score}",
+                    "required": false
+                }
             ],
             "outputs": [
-                {"name": "metacognition", "required": true},
-                {"name": "current_step", "required": true},
-                {"name": "strategy_adjustments", "required": true},
-                {"name": "collaboration_health", "required": true},
-                {"name": "previous_quality_score", "required": true},
-                {"name": "iteration", "required": true},
-                {"name": "execution_history", "required": true},
-                {"name": "quality_score", "required": true}
+                {
+                    "name": "metacognition",
+                    "required": true
+                },
+                {
+                    "name": "current_step",
+                    "required": true
+                },
+                {
+                    "name": "strategy_adjustments",
+                    "required": true
+                },
+                {
+                    "name": "collaboration_health",
+                    "required": true
+                },
+                {
+                    "name": "previous_quality_score",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "required": true
+                },
+                {
+                    "name": "execution_history",
+                    "required": true
+                },
+                {
+                    "name": "quality_score",
+                    "required": true
+                }
             ]
         },
         {
@@ -125,18 +273,52 @@
                 "quality_threshold": 0.8
             },
             "inputs": [
-                {"name": "quality_score", "source": "{steps.metacognition.output.quality_score}", "required": true},
-                {"name": "iteration", "source": "{steps.metacognition.output.iteration}", "required": true},
-                {"name": "max_iterations", "source": "{parameters.max_iterations}", "required": false},
-                {"name": "execution_history", "source": "{steps.metacognition.output.execution_history}", "required": true}
+                {
+                    "name": "quality_score",
+                    "source": "{steps.metacognition.output.quality_score}",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "source": "{steps.metacognition.output.iteration}",
+                    "required": true
+                },
+                {
+                    "name": "max_iterations",
+                    "source": "{parameters.max_iterations}",
+                    "required": false
+                },
+                {
+                    "name": "execution_history",
+                    "source": "{steps.metacognition.output.execution_history}",
+                    "required": true
+                }
             ],
             "outputs": [
-                {"name": "should_continue", "required": true},
-                {"name": "decision", "required": true},
-                {"name": "current_step", "required": true},
-                {"name": "iteration", "required": true},
-                {"name": "execution_history", "required": true},
-                {"name": "quality_score", "required": true}
+                {
+                    "name": "should_continue",
+                    "required": true
+                },
+                {
+                    "name": "decision",
+                    "required": true
+                },
+                {
+                    "name": "current_step",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "required": true
+                },
+                {
+                    "name": "execution_history",
+                    "required": true
+                },
+                {
+                    "name": "quality_score",
+                    "required": true
+                }
             ]
         },
         {
@@ -148,15 +330,40 @@
                 "role": "Combine all agent insights into final output"
             },
             "inputs": [
-                {"name": "task", "source": "{parameters.task}", "required": true},
-                {"name": "execution_history", "source": "{steps.decide_continue.output.execution_history}", "required": true},
-                {"name": "quality_score", "source": "{steps.decide_continue.output.quality_score}", "required": true},
-                {"name": "iteration", "source": "{steps.decide_continue.output.iteration}", "required": true}
+                {
+                    "name": "task",
+                    "source": "{parameters.task}",
+                    "required": true
+                },
+                {
+                    "name": "execution_history",
+                    "source": "{steps.decide_continue.output.execution_history}",
+                    "required": true
+                },
+                {
+                    "name": "quality_score",
+                    "source": "{steps.decide_continue.output.quality_score}",
+                    "required": true
+                },
+                {
+                    "name": "iteration",
+                    "source": "{steps.decide_continue.output.iteration}",
+                    "required": true
+                }
             ],
             "outputs": [
-                {"name": "synthesis", "required": true},
-                {"name": "final_output", "required": true},
-                {"name": "current_step", "required": true}
+                {
+                    "name": "synthesis",
+                    "required": true
+                },
+                {
+                    "name": "final_output",
+                    "required": true
+                },
+                {
+                    "name": "current_step",
+                    "required": true
+                }
             ]
         }
     ],
@@ -166,39 +373,53 @@
             {
                 "from": "planner",
                 "to": "executor",
-                "condition": {"type": "always"}
+                "condition": {
+                    "type": "always"
+                }
             },
             {
                 "from": "executor",
                 "to": "critic",
-                "condition": {"type": "always"}
+                "condition": {
+                    "type": "always"
+                }
             },
             {
                 "from": "critic",
                 "to": "metacognition",
-                "condition": {"type": "always"}
+                "condition": {
+                    "type": "always"
+                }
             },
             {
                 "from": "metacognition",
                 "to": "decide_continue",
-                "condition": {"type": "always"}
+                "condition": {
+                    "type": "always"
+                }
             },
             {
                 "from": "decide_continue",
                 "to": "planner",
                 "condition": {
-                    "type": "field_equals",
-                    "field": "should_continue",
-                    "value": true
+                    "type": "expression",
+                    "config": {
+                        "source": "should_continue",
+                        "operator": "equals",
+                        "value": true
+                    }
                 }
             },
             {
                 "from": "decide_continue",
                 "to": "final_synthesis",
                 "condition": {
-                    "type": "field_equals",
-                    "field": "should_continue",
-                    "value": false
+                    "type": "expression",
+                    "config": {
+                        "source": "should_continue",
+                        "operator": "equals",
+                        "value": false
+                    }
                 }
             }
         ]
