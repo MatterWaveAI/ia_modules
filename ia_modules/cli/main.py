@@ -6,6 +6,7 @@ Provides command-line interface for pipeline operations.
 
 import sys
 import json
+import codecs
 import argparse
 import asyncio
 from pathlib import Path
@@ -13,6 +14,44 @@ from typing import Optional
 
 from .validate import validate_pipeline, ValidationResult
 from .visualize import visualize_pipeline
+
+
+# What a console that cannot show a character gets instead: an ASCII stand-in for
+# the symbols the CLI prints, '?' for anything else. A Windows console on cp1252,
+# or output redirected to a file or pipe there, cannot encode ✓ ✗ •.
+_ASCII_FALLBACKS = {
+    "✓": "+", "✗": "x", "•": "-", "→": "->", "←": "<-",
+    "—": "--", "–": "-", "…": "...", "⚠": "!",
+}
+_CONSOLE_ERRORS = "ia_modules.ascii_fallback"
+
+
+def _ascii_fallback(error: UnicodeError):
+    if not isinstance(error, UnicodeEncodeError):
+        raise error
+    text = error.object[error.start:error.end]
+    return "".join(_ASCII_FALLBACKS.get(ch, "?") for ch in text), error.end
+
+
+codecs.register_error(_CONSOLE_ERRORS, _ascii_fallback)
+
+
+def _make_console_safe(*streams) -> None:
+    """Never fail writing to a console that cannot encode a character."""
+    for stream in streams:
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(errors=_CONSOLE_ERRORS)
+        except (ValueError, OSError):  # closed, or not a reconfigurable stream
+            pass
+
+
+def _read_json(path: Path):
+    # JSON is UTF-8 by definition; the platform default is cp1252 on Windows
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -127,8 +166,7 @@ def cmd_validate(args) -> int:
         return 1
 
     try:
-        with open(pipeline_path, 'r') as f:
-            pipeline_data = json.load(f)
+        pipeline_data = _read_json(pipeline_path)
     except json.JSONDecodeError as e:
         print(f"Error: Invalid JSON in {pipeline_path}: {e}", file=sys.stderr)
         return 1
@@ -158,8 +196,7 @@ def cmd_visualize(args) -> int:
         return 1
 
     try:
-        with open(pipeline_path, 'r') as f:
-            pipeline_data = json.load(f)
+        pipeline_data = _read_json(pipeline_path)
     except json.JSONDecodeError as e:
         print(f"Error: Invalid JSON in {pipeline_path}: {e}", file=sys.stderr)
         return 1
@@ -190,17 +227,16 @@ def cmd_format(args) -> int:
         return 1
 
     try:
-        with open(pipeline_path, 'r') as f:
-            pipeline_data = json.load(f)
+        pipeline_data = _read_json(pipeline_path)
     except json.JSONDecodeError as e:
         print(f"Error: Invalid JSON in {pipeline_path}: {e}", file=sys.stderr)
         return 1
 
-    # Format JSON
-    formatted = json.dumps(pipeline_data, indent=2, sort_keys=False)
+    # Format JSON, keeping non-ASCII text as written rather than as \u escapes
+    formatted = json.dumps(pipeline_data, indent=2, sort_keys=False, ensure_ascii=False)
 
     if args.in_place:
-        with open(pipeline_path, 'w') as f:
+        with open(pipeline_path, 'w', encoding='utf-8') as f:
             f.write(formatted)
         print(f"Formatted {pipeline_path}")
     else:
@@ -229,16 +265,14 @@ def cmd_run(args) -> int:
             print(f"Error: Input file not found: {input_path}", file=sys.stderr)
             return 1
         try:
-            with open(input_path, 'r') as f:
-                input_data = json.load(f)
+            input_data = _read_json(input_path)
         except json.JSONDecodeError as e:
             print(f"Error: Invalid JSON in {input_path}: {e}", file=sys.stderr)
             return 1
 
     # Load pipeline config
     try:
-        with open(pipeline_path, 'r') as f:
-            pipeline_config = json.load(f)
+        pipeline_config = _read_json(pipeline_path)
     except json.JSONDecodeError as e:
         print(f"Error: Invalid JSON in {pipeline_path}: {e}", file=sys.stderr)
         return 1
@@ -272,7 +306,7 @@ def cmd_run(args) -> int:
 
         if args.output:
             output_path = Path(args.output)
-            with open(output_path, 'w') as f:
+            with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(output_json)
             print(f"Pipeline result saved to: {output_path}")
         else:
@@ -343,6 +377,7 @@ def cli(argv: Optional[list] = None) -> int:
 
 def main():
     """Entry point for console script"""
+    _make_console_safe(sys.stdout, sys.stderr)
     sys.exit(cli())
 
 
