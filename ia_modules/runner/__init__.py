@@ -1,7 +1,7 @@
 """
 Runner Entrypoint for IA Modules
 
-The container story (T-003): one process, one pipeline, one exit code.
+The container story: one process, one pipeline, one exit code.
 `ia-runner` loads a bundle pipeline file (YAML or JSON), runs it against
 nexusql storage configured from the environment, checkpoints progress, and
 resumes from the last checkpoint when retried with the same run id.

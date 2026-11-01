@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚀 Major Features
 
-**Runner Entrypoint (`ia-runner`)** — agent-command-center spec T-003
+**Runner Entrypoint (`ia-runner`)**
 - New `ia_modules.runner` subpackage and `ia-runner` console script: run ONE
   pipeline from a bundle file and exit — the exit code is the outcome
   (`0` success, `1` failure, `2` usage error)
@@ -59,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Runner contract (args, env, exit codes) documented in
   `ia_modules/runner/main.py`; the Dockerfile and smoke steps carry the
-  platform context (one image, three k8s wrappers; T-003)
+  platform context (one image, three k8s wrappers)
 
 ### ⚠️ Notes
 

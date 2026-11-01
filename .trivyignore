@@ -1,4 +1,4 @@
-# Trivy waivers — findings accepted instead of fixed (T-060).
+# Trivy waivers — findings accepted instead of fixed.
 #
 # Policy: an entry here means the finding was triaged, accepted, and is
 # re-reviewed each release. Every waiver carries the date it was accepted,

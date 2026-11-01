@@ -1,4 +1,4 @@
-# The Command Center runner image (agent-command-center spec T-003).
+# The Command Center runner image.
 #
 # One image, `agent-runner`: ia_modules plus the `postgres` extra. The
 # platform runs it three ways — Pipeline Job (the default), queue worker,

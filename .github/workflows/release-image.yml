@@ -1,10 +1,10 @@
 name: Runner image
 
-# T-003: the tag is the release. Build the agent-runner image, prove it
+# The tag is the release. Build the agent-runner image, prove it
 # against a real Postgres (fail after first checkpoint -> retry must
 # resume), then push to GHCR. test.yml covers test+lint on branch pushes;
 # tags don't trigger it, so a fast unit gate runs here before the push.
-# T-060: the pushed image is scanned before it ships — a CRITICAL or HIGH
+# The pushed image is scanned before it ships — a CRITICAL or HIGH
 # with a fix available blocks the release; unfixed findings and lower
 # severities are report-only. Waivers live in .trivyignore, one line per
 # accepted finding with a date and a reason, reviewed per release.
@@ -156,7 +156,7 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    # T-060: the image scan already reads the installed Python packages
+    # The image scan already reads the installed Python packages
     # off the filesystem, so no separate pip audit runs here. CRITICAL/HIGH
     # with a fix available fail; unfixed and lower severities are
     # report-only noise.
