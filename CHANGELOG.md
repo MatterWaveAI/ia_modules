@@ -5,7 +5,10 @@ All notable changes to IA Modules will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.1] - 2026-10-31
+## [Unreleased]
+
+Changes on `develop`, not yet in a release. The version is set when a release is cut,
+not per change.
 
 ### 🚀 Major Features
 
@@ -44,6 +47,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.github/workflows/release-image.yml`: on `v*` tags — unit gate, the
   checkpoint-resume smoke test, then build & push to
   `ghcr.io/matterwaveai/agent-runner` (semver + latest tags, GHA cache)
+- The image is scanned with Trivy before it is pushed: a CRITICAL or HIGH
+  finding with a fix available fails the release; waivers go in
+  `.trivyignore`, each with a date, a reason and a review date
+
+### 🐛 Fixes
+
+- `ia-modules` no longer crashes on a console that cannot encode its output
+  (a Windows console on cp1252, or output redirected to a file or pipe
+  there): characters it cannot show get ASCII stand-ins. Pipeline, input and
+  output JSON are read and written as UTF-8 on every platform, and
+  `format --in-place` keeps non-ASCII text instead of rewriting it as `\u`
+  escapes
+- The `postgres`, `sql` and `all` extras install psycopg 3
+  (`psycopg[binary,pool]==3.3.6`), the driver nexusql uses; they installed
+  psycopg2-binary, which left `ia_modules[postgres]` unable to open a
+  PostgreSQL database. The SQLAlchemy backend reads a bare `postgresql://`
+  URL as `postgresql+psycopg://`
+- Example pipelines: every example under `tests/pipelines` validates and
+  runs. `iterative_refinement`, `code_generation`, `rag_with_guardrails`,
+  `multi_agent_collaboration` and `email_auto_responder` could not load;
+  `loop_pipeline` now passes `max_revisions` to its review step, and
+  `parallel_pipeline`'s merger counts every stream instead of none
+- The showcase loads every example pipeline, not a fixed five
 
 ### 🧪 Testing
 
@@ -54,12 +80,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against a real PostgreSQL (`postgres` + `integration` markers, skipped
   unless `TEST_POSTGRESQL_URL` is reachable — same pattern as the Redis
   integration tests; compose file serves it on port 15432)
+- New `tests/unit/test_example_pipelines.py` validates and runs every
+  example pipeline offline with the inputs it declares
+- New `tests/unit/test_cli_console_encoding.py` runs the real `ia-modules`
+  entry point with a cp1252 console and fails on any default-encoding file
+  open in the CLI
 
 ### 📖 Documentation
 
 - Runner contract (args, env, exit codes) documented in
   `ia_modules/runner/main.py`; the Dockerfile and smoke steps carry the
   platform context (one image, three k8s wrappers)
+- READMEs for the agent, conditional, iterative_refinement, loop, parallel
+  and rag_with_guardrails examples: what each does, how to run it, what it
+  needs, what it returns
 
 ### ⚠️ Notes
 
@@ -67,7 +101,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The bundle schema's `execution` (timeout, max_retries) and
   `error_handling` (on_step_failure) fields ride along; the engine still
   applies timeout/retry per-step, not per-pipeline
-- No breaking changes; the existing `ia-modules` CLI is untouched
+- `ia_modules[postgres]` installs psycopg 3 instead of psycopg2-binary; code
+  that imports psycopg2 itself must now install it itself
 
 ---
 
