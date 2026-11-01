@@ -51,12 +51,12 @@ async def load_step_class_async(
     return load_step_class(module_path, class_name)
 
 
-def create_step_from_json(step_def: Dict[str, Any], context: Dict[str, Any] = None) -> Step:
+def create_step_from_json(step_def: Dict[str, Any], context: Dict[str, Any] = None, strict: bool = True) -> Step:
     """Create step instance from JSON definition (synchronous, filesystem only)"""
     # Resolve template parameters in step configuration
     resolved_config = step_def.get('config', {})
     if context:
-        resolved_config = TemplateParameterResolver.resolve_parameters(resolved_config, context)
+        resolved_config = TemplateParameterResolver.resolve_parameters(resolved_config, context, strict=strict)
 
     step_class = load_step_class(step_def['module'], step_def.get('step_class', step_def.get('class', '')))
     step_name = step_def.get('id', step_def.get('name', 'Unknown'))
@@ -97,10 +97,10 @@ async def create_step_from_json_async(
     return step_class(step_name, resolved_config)
 
 
-def _parameter_values(pipeline_config: Dict[str, Any], input_data: Dict[str, Any]) -> Dict[str, Any]:
+def _parameter_values(pipeline_config: Dict[str, Any], input_data: Dict[str, Any], require: bool = True) -> Dict[str, Any]:
     """The values templates resolve against: the input, plus schema defaults
-    for anything missing. A required parameter with neither is an error here,
-    rather than a literal '{{ parameters.x }}' failing deep inside a step."""
+    for anything missing. With require, a required parameter with neither is an
+    error here, rather than a literal '{{ parameters.x }}' failing deep inside a step."""
     values = dict(input_data)
     schemas = pipeline_config.get('parameters')
     if not isinstance(schemas, list):
@@ -118,7 +118,7 @@ def _parameter_values(pipeline_config: Dict[str, Any], input_data: Dict[str, Any
         elif schema.get('required'):
             missing.append(name)
 
-    if missing:
+    if missing and require:
         raise ValueError(
             f"Pipeline '{pipeline_config.get('name', 'Unknown')}' requires parameters it was not given: "
             + ", ".join(missing)
@@ -127,20 +127,27 @@ def _parameter_values(pipeline_config: Dict[str, Any], input_data: Dict[str, Any
 
 
 def create_pipeline_from_json(pipeline_config: Dict[str, Any], services: Optional[ServiceRegistry] = None, input_data: Optional[Dict[str, Any]] = None) -> Pipeline:
-    """Create pipeline from JSON configuration with graph-based execution support"""
+    """Create pipeline from JSON configuration with graph-based execution support.
+
+    With input_data, required parameters are checked and every
+    {{ parameters.x }} template must resolve; a missing one is an error here.
+    Without it (a pipeline built now and run with its inputs later), schema
+    defaults still apply and templates naming other parameters stay as written.
+    """
+    inputs_known = input_data is not None
 
     # Prepare context for template resolution. input_data provides the
     # parameter values; pipeline_config['parameters'] may list their schemas,
     # which supply defaults and say which are required.
     context = {
-        'parameters': _parameter_values(pipeline_config, input_data or {}),
+        'parameters': _parameter_values(pipeline_config, input_data or {}, require=inputs_known),
         'pipeline_input': input_data or {}
     }
 
     # Create steps with template resolution
     steps = []
     for step_def in pipeline_config['steps']:
-        step = create_step_from_json(step_def, context)
+        step = create_step_from_json(step_def, context, strict=inputs_known)
         steps.append(step)
 
     # Extract structure for graph-based execution (if present)
@@ -157,7 +164,7 @@ def create_pipeline_from_json(pipeline_config: Dict[str, Any], services: Optiona
     # _evaluate_condition sees real values (e.g. 0.8) instead of literal strings.
     # Step configs are already resolved above via create_step_from_json(context).
     flow = TemplateParameterResolver.resolve_parameters(
-        pipeline_config.get('flow', {}), context
+        pipeline_config.get('flow', {}), context, strict=inputs_known
     )
     loop_config = pipeline_config.get('loop_config', None)
 

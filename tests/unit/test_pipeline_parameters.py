@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from ia_modules.pipeline.core import TemplateParameterResolver
+from ia_modules.pipeline.core import ExecutionContext, TemplateParameterResolver
 from ia_modules.pipeline.graph_pipeline_runner import GraphPipelineRunner
 from ia_modules.pipeline.runner import create_pipeline_from_json
 from ia_modules.pipeline.services import ServiceRegistry
@@ -61,3 +61,26 @@ async def test_runner_reports_missing_parameters_before_running():
 
     with pytest.raises(ValueError, match="requires parameters it was not given: threshold, test_data"):
         await GraphPipelineRunner().run_pipeline_from_json(config, {"data": "not the declared inputs"})
+
+
+def test_building_without_inputs_defers_the_check():
+    """A pipeline built now and run with its inputs later must still build"""
+    pipeline = create_pipeline_from_json(_config(), ServiceRegistry())
+
+    step = pipeline.steps[0]
+    assert step.config["limit"] == "{{ parameters.threshold }}"  # unknown until run time
+    assert step.config["title"] == "Run: untitled"  # defaults still apply
+
+
+async def test_build_then_run_with_inputs():
+    pipeline_file = Path(__file__).parent.parent / "pipelines" / "parallel_pipeline" / "pipeline.json"
+    config = json.loads(pipeline_file.read_text(encoding="utf-8"))
+
+    pipeline = create_pipeline_from_json(config, ServiceRegistry())
+    result = await pipeline.run(
+        {"loaded_data": [{"value": n} for n in range(6)]},
+        ExecutionContext(execution_id="e1", pipeline_id="parallel"),
+    )
+
+    assert result["output"]["total_records_processed"] == 6
+

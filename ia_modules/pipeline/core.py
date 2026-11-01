@@ -52,8 +52,13 @@ class TemplateParameterResolver:
     """Resolves template parameters in configuration"""
 
     @staticmethod
-    def resolve_parameters(config: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Resolve template parameters in configuration using context"""
+    def resolve_parameters(config: Dict[str, Any], context: Dict[str, Any], strict: bool = True) -> Dict[str, Any]:
+        """Resolve template parameters in configuration using context.
+
+        strict: a template naming a parameter the context lacks is an error.
+        Not strict, it is left as written, for a pipeline built before its
+        inputs are known.
+        """
         def resolve_value(obj):
             if isinstance(obj, dict):
                 return {k: resolve_value(v) for k, v in obj.items()}
@@ -73,8 +78,9 @@ class TemplateParameterResolver:
                         params = context.get('parameters', {})
                         if param_name in params:
                             return params[param_name]
-                        raise ValueError(_missing_parameter(param_name, obj))
-                    return obj  # Not a parameter reference; other resolvers handle it.
+                        if strict:
+                            raise ValueError(_missing_parameter(param_name, obj))
+                    return obj  # Unresolved, or not a parameter reference
 
                 def replace_param(match):
                     param_path = match.group(1).strip()
@@ -82,7 +88,9 @@ class TemplateParameterResolver:
                         param_name = param_path[11:]  # Remove 'parameters.'
                         params = context.get('parameters', {})
                         if param_name not in params:
-                            raise ValueError(_missing_parameter(param_name, obj))
+                            if strict:
+                                raise ValueError(_missing_parameter(param_name, obj))
+                            return match.group(0)
                         return str(params[param_name])
                     return match.group(0)
 
