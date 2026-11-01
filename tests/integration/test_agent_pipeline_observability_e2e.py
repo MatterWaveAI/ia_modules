@@ -62,6 +62,7 @@ from ia_modules.telemetry.metrics import MetricsCollector
 from ia_modules.telemetry.tracing import Tracer, Span
 from ia_modules.telemetry.agent_telemetry import AgentTelemetry
 from ia_modules.telemetry.llm_telemetry import LLMTelemetry
+from tests.integration import jaeger_query
 
 logger = logging.getLogger(__name__)
 
@@ -211,13 +212,7 @@ class ReviewAgent(BaseAgent):
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _query_jaeger_traces(service: str, operation: str, limit: int = 20) -> list:
-    resp = requests.get(
-        f"{JAEGER_URL}/api/traces",
-        params={"service": service, "operation": operation, "limit": limit},
-        timeout=10,
-    )
-    assert resp.status_code == 200, f"Jaeger API error: {resp.status_code}"
-    return resp.json().get("data", [])
+    return jaeger_query.find_traces(JAEGER_URL, service, operation, limit=limit)
 
 
 def _wait_for_jaeger_service(service: str, timeout: int = 15) -> list:
@@ -225,15 +220,12 @@ def _wait_for_jaeger_service(service: str, timeout: int = 15) -> list:
     import time
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        resp = requests.get(f"{JAEGER_URL}/api/services", timeout=5)
-        if resp.status_code == 200:
-            services = resp.json().get("data", [])
-            if service in services:
-                return services
+        services = jaeger_query.services(JAEGER_URL)
+        if service in services:
+            return services
         time.sleep(1)
     # Final attempt for assertion message
-    resp = requests.get(f"{JAEGER_URL}/api/services", timeout=5)
-    return resp.json().get("data", [])
+    return jaeger_query.services(JAEGER_URL)
 
 
 def _wait_for_jaeger_traces(service: str, operation: str, timeout: int = 15) -> list:
@@ -286,7 +278,7 @@ class TestAgentPipelineObservabilityE2E:
         assert resp.status_code == 200, "OTel Collector health check failed"
 
         # Jaeger query API
-        resp = requests.get(f"{JAEGER_URL}/api/services", timeout=5)
+        resp = requests.get(f"{JAEGER_URL}/api/v3/services", timeout=5)
         assert resp.status_code == 200, "Jaeger API not responding"
 
         # Prometheus

@@ -13,6 +13,7 @@ import pytest
 
 requests = pytest.importorskip("requests")
 from ia_modules.telemetry.metrics import MetricsCollector, Metric, MetricType
+from tests.integration import jaeger_query
 
 
 def _reachable(url: str) -> bool:
@@ -548,47 +549,21 @@ class TestJaegerHealth:
 
     def test_jaeger_api_services(self, jaeger_url):
         """Test Jaeger API services endpoint"""
-        response = requests.get(
-            f"{jaeger_url}/api/services",
-            timeout=5
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert 'data' in data
-        assert isinstance(data['data'], list)
+        services = jaeger_query.services(jaeger_url)
+        assert isinstance(services, list)
 
     def test_jaeger_api_operations(self, jaeger_url):
         """Test Jaeger API operations endpoint"""
-        # First get a service
-        response = requests.get(f"{jaeger_url}/api/services", timeout=5)
-        assert response.status_code == 200
-        services = response.json()['data']
+        services = jaeger_query.services(jaeger_url)
 
         if len(services) > 0:
-            # Get operations for first service
-            service_name = services[0]
-            response = requests.get(
-                f"{jaeger_url}/api/services/{service_name}/operations",
-                timeout=5
-            )
-            assert response.status_code == 200
-            data = response.json()
-            assert 'data' in data
+            ops = jaeger_query.operations(jaeger_url, services[0])
+            assert isinstance(ops, list)
 
     def test_jaeger_api_traces(self, jaeger_url):
         """Test Jaeger API traces search endpoint"""
-        params = {
-            'service': 'test-service',
-            'limit': 10
-        }
-        response = requests.get(
-            f"{jaeger_url}/api/traces",
-            params=params,
-            timeout=5
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert 'data' in data
+        traces = jaeger_query.find_traces(jaeger_url, 'test-service', limit=10)
+        assert isinstance(traces, list)
 
 
 @pytest.mark.observability
