@@ -51,7 +51,8 @@ redis = [
     "redis==7.4.0",
 ]
 postgres = [
-    "psycopg2-binary==2.9.11",
+    # psycopg 3: the driver nexusql uses, and SQLAlchemy's postgresql+psycopg
+    "psycopg[binary,pool]==3.3.6",
 ]
 mysql = [
     "pymysql==1.1.2",
@@ -60,7 +61,7 @@ mssql = [
     "pyodbc==5.3.0",
 ]
 sql = [
-    "psycopg2-binary==2.9.11",  # PostgreSQL
+    "psycopg[binary,pool]==3.3.6",  # PostgreSQL
     "pymysql==1.1.2",  # MySQL
     "pyodbc==5.3.0",  # MSSQL
 ]
@@ -102,7 +103,7 @@ ai-advanced = [
 ]
 all = [
     "redis==7.4.0",
-    "psycopg2-binary==2.9.11",
+    "psycopg[binary,pool]==3.3.6",
     "pymysql==1.1.2",
     "pyodbc==5.3.0",
     "graphviz==0.21",

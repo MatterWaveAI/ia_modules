@@ -27,7 +27,7 @@ WORKDIR /app
 
 # Install the package itself. Core dependencies bring nexusql (pinned
 # ==0.4.0) and pyyaml (bundle pipelines); the postgres extra brings
-# psycopg2-binary. All wheels — no build tools needed on slim.
+# psycopg 3, the driver nexusql uses. All wheels — no build tools needed on slim.
 COPY pyproject.toml README.md ./
 COPY ia_modules ./ia_modules
 RUN pip install ".[postgres]"
