@@ -56,7 +56,7 @@ class TestPipelineLifecycle:
                 "name": "Test Pipeline",
                 "description": "E2E test pipeline",
                 "version": "1.0",
-                "is_active": 1,  # Use integer for boolean
+                "is_active": True,  # a real boolean: PostgreSQL rejects 1 for a BOOLEAN column
                 "created_at": datetime.now(timezone.utc)
             })
 
