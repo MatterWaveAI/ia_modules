@@ -20,7 +20,7 @@ Core Modules:
 - utils: Utility functions
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 # Modules are available but not auto-imported to avoid circular dependencies
 # Import them explicitly as needed:

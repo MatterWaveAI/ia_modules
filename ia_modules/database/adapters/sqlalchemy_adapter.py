@@ -24,6 +24,19 @@ from ..interfaces import DatabaseInterface, QueryResult, create_query_result, cr
 logger = logging.getLogger(__name__)
 
 
+def _with_psycopg3_driver(database_url: str) -> str:
+    """Point a bare PostgreSQL URL at psycopg 3.
+
+    SQLAlchemy reads ``postgresql://`` as psycopg2, but the postgres extra
+    installs psycopg 3, the driver nexusql uses too. A URL that names its own
+    driver (``postgresql+asyncpg://`` and the like) is left alone.
+    """
+    for scheme in ("postgresql://", "postgres://"):
+        if database_url.startswith(scheme):
+            return "postgresql+psycopg://" + database_url[len(scheme):]
+    return database_url
+
+
 class SQLAlchemyAdapter(DatabaseInterface):
     """
     Adapter that wraps SQLAlchemy to implement DatabaseInterface.
@@ -69,7 +82,7 @@ class SQLAlchemyAdapter(DatabaseInterface):
                 **self.engine_kwargs
             }
 
-            self._engine = create_engine(self.database_url, **engine_kwargs)  # type: ignore[assignment]
+            self._engine = create_engine(_with_psycopg3_driver(self.database_url), **engine_kwargs)  # type: ignore[assignment]
 
             # Create session maker
             self._session_maker = sessionmaker(bind=self._engine)  # type: ignore[assignment]

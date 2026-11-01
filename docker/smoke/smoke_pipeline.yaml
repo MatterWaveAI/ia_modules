@@ -1,0 +1,40 @@
+name: runner_smoke
+version: "1.0.0"
+description: Smoke pipeline for the agent-runner image — echo stamps a marker, verify passes it on; the release CI proves checkpoint-resume with it
+
+execution:
+  engine: ia_modules
+  timeout: 60
+  max_retries: 1
+
+steps:
+  - id: echo
+    name: Echo Marker
+    module: smoke_steps
+    step_class: EchoStep
+    config:
+      description: Stamp the SMOKE_MARKER env value into the run data
+
+  - id: verify
+    name: Verify Passthrough
+    module: smoke_steps
+    step_class: VerifyStep
+    config:
+      description: Pass the data through so the flow has a second hop
+
+flow:
+  start_at: echo
+
+  paths:
+    - from: echo
+      to: verify
+      condition:
+        type: always
+
+    - from: verify
+      to: end_with_success
+      condition:
+        type: always
+
+error_handling:
+  on_step_failure: stop

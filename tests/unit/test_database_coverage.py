@@ -536,3 +536,20 @@ class TestInterfaceCompliance:
         }
         abstract_methods = DatabaseInterface.__abstractmethods__
         assert expected_methods == abstract_methods
+
+
+class TestSQLAlchemyPostgresDriver:
+    """The postgres extra installs psycopg 3, so the SQLAlchemy backend must ask for it."""
+
+    @pytest.mark.parametrize("url, expected", [
+        ("postgresql://u:p@h:5432/db", "postgresql+psycopg://u:p@h:5432/db"),
+        ("postgres://u:p@h/db", "postgresql+psycopg://u:p@h/db"),
+        ("postgresql+asyncpg://u@h/db", "postgresql+asyncpg://u@h/db"),
+        ("postgresql+psycopg2://u@h/db", "postgresql+psycopg2://u@h/db"),
+        ("sqlite:///x.db", "sqlite:///x.db"),
+        ("mysql+pymysql://u@h/db", "mysql+pymysql://u@h/db"),
+    ])
+    def test_bare_postgres_urls_get_the_psycopg3_driver(self, url, expected):
+        from ia_modules.database.adapters.sqlalchemy_adapter import _with_psycopg3_driver
+        assert _with_psycopg3_driver(url) == expected
+

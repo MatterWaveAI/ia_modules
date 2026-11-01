@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ia_modules"
-version = "0.3.0"
+version = "0.3.1"
 description = "AI agent framework"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -31,6 +31,7 @@ dependencies = [
     "beautifulsoup4==4.14.3",
     # "aiohttp==3.13.3",  # TODO: re-enable after web_scraper refactor
     "python-dateutil==2.9.0.post0",
+    "pyyaml==6.0.3",
     "httpx==0.28.1",
     "python-jose[cryptography]==3.5.0",
 ]
@@ -50,7 +51,8 @@ redis = [
     "redis==7.4.0",
 ]
 postgres = [
-    "psycopg2-binary==2.9.11",
+    # psycopg 3: the driver nexusql uses, and SQLAlchemy's postgresql+psycopg
+    "psycopg[binary,pool]==3.3.6",
 ]
 mysql = [
     "pymysql==1.1.2",
@@ -59,7 +61,7 @@ mssql = [
     "pyodbc==5.3.0",
 ]
 sql = [
-    "psycopg2-binary==2.9.11",  # PostgreSQL
+    "psycopg[binary,pool]==3.3.6",  # PostgreSQL
     "pymysql==1.1.2",  # MySQL
     "pyodbc==5.3.0",  # MSSQL
 ]
@@ -101,7 +103,7 @@ ai-advanced = [
 ]
 all = [
     "redis==7.4.0",
-    "psycopg2-binary==2.9.11",
+    "psycopg[binary,pool]==3.3.6",
     "pymysql==1.1.2",
     "pyodbc==5.3.0",
     "graphviz==0.21",
@@ -129,6 +131,7 @@ Issues = "https://github.com/matterwaveai/ia_modules/issues"
 
 [project.scripts]
 ia-modules = "ia_modules.cli.main:main"
+ia-runner = "ia_modules.runner.main:main"
 
 [tool.setuptools.packages.find]
 # Find all packages in the current directory
