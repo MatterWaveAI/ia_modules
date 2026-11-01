@@ -25,7 +25,18 @@ class ResultsMergerStep(Step):
             if key in input and input[key]:
                 stream_results.append(input[key])
         
-        # Option 2: If no named inputs, try to get the last step's processed_data
+        # Option 2: the runner stores each step's result under its id in the
+        # shared data, so the parallel streams are the dicts carrying a
+        # stream_id and processed_data; take them in stream order
+        if not stream_results:
+            streams = sorted(
+                (value for value in input.values()
+                 if isinstance(value, dict) and 'stream_id' in value and 'processed_data' in value),
+                key=lambda value: value.get('stream_id') or 0,
+            )
+            stream_results = [stream['processed_data'] for stream in streams]
+
+        # Option 3: a single processed_data (one stream, or the last to run)
         if not stream_results and 'processed_data' in input:
             data = input['processed_data']
             if isinstance(data, list):
@@ -35,7 +46,7 @@ class ResultsMergerStep(Step):
                 # Single result - wrap in list
                 stream_results = [data]
         
-        # Option 3: Try to extract any data that looks like processed results
+        # Option 4: anything that looks like processed results
         if not stream_results:
             for key, value in input.items():
                 if 'processed' in key.lower() and isinstance(value, (list, dict)):

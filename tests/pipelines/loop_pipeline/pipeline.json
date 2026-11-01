@@ -5,13 +5,17 @@
   "parameters": [
     {
       "name": "topic",
-      "schema": {"type": "string"},
+      "schema": {
+        "type": "string"
+      },
       "required": true,
       "description": "The topic to generate content about"
     },
     {
       "name": "max_revisions",
-      "schema": {"type": "integer"},
+      "schema": {
+        "type": "integer"
+      },
       "required": true,
       "description": "Maximum number of revision iterations"
     }
@@ -22,32 +26,86 @@
       "name": "Draft Content",
       "step_class": "DraftContentStep",
       "module": "tests.pipelines.loop_pipeline.steps.draft_content",
-      "inputs": {
-        "topic": "{{ parameters.topic }}"
-      },
-      "outputs": ["draft", "revision_count"]
+      "inputs": [
+        {
+          "name": "topic",
+          "source": "{parameters.topic}",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "draft",
+          "required": true
+        },
+        {
+          "name": "revision_count",
+          "required": true
+        }
+      ]
     },
     {
       "id": "review_content",
       "name": "Review Content Quality",
       "step_class": "ReviewContentStep",
       "module": "tests.pipelines.loop_pipeline.steps.review_content",
-      "inputs": {
-        "draft": "{{ draft_content.draft }}",
-        "revision_count": "{{ draft_content.revision_count }}"
-      },
-      "outputs": ["approved", "feedback", "quality_score"]
+      "inputs": [
+        {
+          "name": "draft",
+          "source": "{steps.draft_content.output.draft}",
+          "required": true
+        },
+        {
+          "name": "revision_count",
+          "source": "{steps.draft_content.output.revision_count}",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "approved",
+          "required": true
+        },
+        {
+          "name": "feedback",
+          "required": true
+        },
+        {
+          "name": "quality_score",
+          "required": true
+        }
+      ],
+      "config": {
+        "max_revisions": "{{ parameters.max_revisions }}"
+      }
     },
     {
       "id": "publish_content",
       "name": "Publish Final Content",
       "step_class": "PublishContentStep",
       "module": "tests.pipelines.loop_pipeline.steps.publish_content",
-      "inputs": {
-        "draft": "{{ draft_content.draft }}",
-        "quality_score": "{{ review_content.quality_score }}"
-      },
-      "outputs": ["published_url", "final_draft"]
+      "inputs": [
+        {
+          "name": "draft",
+          "source": "{steps.draft_content.output.draft}",
+          "required": true
+        },
+        {
+          "name": "quality_score",
+          "source": "{steps.review_content.output.quality_score}",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "published_url",
+          "required": true
+        },
+        {
+          "name": "final_draft",
+          "required": true
+        }
+      ]
     }
   ],
   "flow": {
@@ -56,7 +114,9 @@
       {
         "from": "draft_content",
         "to": "review_content",
-        "condition": {"type": "always"}
+        "condition": {
+          "type": "always"
+        }
       },
       {
         "from": "review_content",

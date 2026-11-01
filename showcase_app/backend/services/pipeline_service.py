@@ -267,14 +267,15 @@ class PipelineService:
             return []
 
     def load_test_pipelines(self):
-        """Load ACTUAL test pipelines from ia_modules/tests/pipelines/ and save to database"""
-        test_pipeline_dirs = [
-            "simple_pipeline",
-            "conditional_pipeline",
-            "parallel_pipeline",
-            "loop_pipeline",
-            "hitl_pipeline"
-        ]
+        """Load every example pipeline from ia_modules/tests/pipelines/ and save to database.
+
+        An example is a folder holding a pipeline.json; folders without one (step
+        fixtures, the two-part vector RAG example) are not pipelines to show.
+        """
+        test_pipeline_dirs = sorted(
+            folder.name for folder in self.pipeline_dir.iterdir()
+            if folder.is_dir() and (folder / "pipeline.json").is_file()
+        )
 
         for pipeline_name in test_pipeline_dirs:
             pipeline_path = self.pipeline_dir / pipeline_name / "pipeline.json"
