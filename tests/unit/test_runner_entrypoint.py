@@ -19,12 +19,14 @@ import textwrap
 import pytest
 
 from ia_modules.runner import (
+    CLI_SPECS,
     EXIT_FAILED,
     EXIT_OK,
     EXIT_USAGE,
     RunnerUsageError,
     build_db_url_from_env,
     create_parser,
+    detect_cli_inventory,
     load_pipeline_config,
     runner_main,
 )
@@ -168,6 +170,92 @@ class TestArgumentParsing:
     def test_version_flag(self):
         """Test --version parses"""
         assert create_parser().parse_args(['--version']).version is True
+
+    def test_list_clis_flag(self):
+        """Test --list-clis parses"""
+        assert create_parser().parse_args(['--list-clis']).list_clis is True
+
+
+class TestCliInventory:
+    """Test --list-clis and detect_cli_inventory (T-080)"""
+
+    def test_all_six_installed(self):
+        """All six CLIs on PATH with working --version report available + version"""
+        paths = {
+            "claude": "/usr/local/bin/claude",
+            "opencode": "/usr/local/bin/opencode",
+            "aider": "/usr/local/bin/aider",
+            "codex": "/usr/local/bin/codex",
+            "gemini": "/usr/local/bin/gemini",
+            "qwen": "/usr/local/bin/qwen",
+        }
+        versions = {
+            "/usr/local/bin/claude": "1.0.24 (Claude Code)",
+            "/usr/local/bin/opencode": "opencode 0.3.12",
+            "/usr/local/bin/aider": "aider 0.75.1",
+            "/usr/local/bin/codex": "codex-cli 0.1.9",
+            "/usr/local/bin/gemini": "0.4.2",
+            "/usr/local/bin/qwen": "qwen-code 0.2.0",
+        }
+        inv = detect_cli_inventory(which=paths.get, probe_version=versions.get)
+        assert [c["name"] for c in inv["clis"]] == [spec[0] for spec in CLI_SPECS]
+        assert all(c["available"] is True for c in inv["clis"])
+        by_name = {c["name"]: c for c in inv["clis"]}
+        assert by_name["claude_code"]["version"] == "1.0.24 (Claude Code)"
+        assert by_name["qwen_code"]["binary"] == "qwen"
+        assert by_name["qwen_code"]["path"] == "/usr/local/bin/qwen"
+
+    def test_some_installed_and_broken_binary_marked_unavailable(self):
+        """Missing binaries and binaries whose --version fails report available=False"""
+        paths = {
+            "claude": "/usr/local/bin/claude",
+            "qwen-agent": "/opt/bin/qwen-agent",
+            "codex": "/usr/local/bin/codex",
+        }
+        versions = {
+            "/usr/local/bin/claude": "1.0.24",
+            "/opt/bin/qwen-agent": "qwen-agent 0.1.5",
+            "/usr/local/bin/codex": None,  # on PATH, but --version failed
+        }
+        inv = detect_cli_inventory(which=paths.get, probe_version=versions.get)
+        by_name = {c["name"]: c for c in inv["clis"]}
+        assert by_name["claude_code"]["available"] is True
+        assert by_name["claude_code"]["version"] == "1.0.24"
+        assert by_name["qwen_code"]["available"] is True
+        assert by_name["qwen_code"]["binary"] == "qwen-agent"
+        assert by_name["codex"]["available"] is False
+        assert by_name["codex"]["version"] is None
+        assert by_name["codex"]["path"] == "/usr/local/bin/codex"
+        assert by_name["aider"]["available"] is False
+        assert by_name["aider"]["path"] is None
+
+    def test_none_installed(self):
+        """When no CLI binaries are on PATH, all six entries report available=False"""
+        inv = detect_cli_inventory(which=lambda _: None, probe_version=lambda _: None)
+        assert len(inv["clis"]) == 6
+        assert all(c["available"] is False and c["version"] is None and c["path"] is None for c in inv["clis"])
+
+    def test_list_clis_entrypoint_emits_json_and_exits_zero(self, no_runner_env, monkeypatch, capsys):
+        """ia-runner --list-clis emits the JSON inventory and exits 0 without --pipeline"""
+        monkeypatch.setattr(
+            "ia_modules.runner.main.detect_cli_inventory",
+            lambda: {
+                "clis": [
+                    {
+                        "name": "claude_code",
+                        "label": "Claude Code",
+                        "binary": "claude",
+                        "available": True,
+                        "version": "1.0.24",
+                        "path": "/usr/local/bin/claude",
+                    }
+                ]
+            },
+        )
+        assert runner_main(["--list-clis"]) == EXIT_OK
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["clis"][0]["name"] == "claude_code"
+        assert payload["clis"][0]["available"] is True
 
 
 class TestPipelineLoading:

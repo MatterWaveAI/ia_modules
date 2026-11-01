@@ -11,6 +11,8 @@ Args:
     --working-dir DIR  Added to sys.path first, so a step's `module:` import
                        resolves (the directory holding the pipeline's steps/)
     --output PATH      Write the full result JSON here (default: stdout)
+    --list-clis        Detect the six CLI agents on PATH (+ version output),
+                       emit JSON and exit 0 (T-080)
     --version          Print the ia_modules version and exit 0 (the image
                        HEALTHCHECK uses this as its no-op probe)
 
@@ -43,10 +45,12 @@ import asyncio
 import json
 import logging
 import os
+import shutil
+import subprocess
 import sys
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from ia_modules import __version__
 
@@ -55,6 +59,19 @@ logger = logging.getLogger("ia_modules.runner")
 EXIT_OK = 0
 EXIT_FAILED = 1
 EXIT_USAGE = 2
+
+# T-080: the six CLI agents the runner image can host (docs/a0c-harvest.md).
+# Each tuple is (canonical name, display label, binary names in search order).
+CLI_SPECS: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
+    ("claude_code", "Claude Code", ("claude",)),
+    ("opencode", "OpenCode", ("opencode",)),
+    ("aider", "Aider", ("aider",)),
+    ("codex", "Codex", ("codex",)),
+    ("gemini", "Gemini", ("gemini",)),
+    ("qwen_code", "Qwen", ("qwen", "qwen-agent")),
+)
+
+CLI_PROBE_TIMEOUT_SECONDS = 5.0
 
 # Schema fields the engine reads directly. `execution` and `error_handling`
 # ride along in the bundle schema (engine, timeout, on_step_failure); the
@@ -95,11 +112,74 @@ def create_parser() -> argparse.ArgumentParser:
         help='Path to save the result JSON (default: print to stdout)'
     )
     parser.add_argument(
+        '--list-clis',
+        action='store_true',
+        help='Detect the six CLI agents (binary on PATH + version output), emit JSON and exit'
+    )
+    parser.add_argument(
         '--version',
         action='store_true',
         help='Print the ia_modules version and exit'
     )
     return parser
+
+
+def _probe_cli_version(binary_path: str, timeout: float = CLI_PROBE_TIMEOUT_SECONDS) -> Optional[str]:
+    """Run `<binary> --version` and return the first non-empty output line, or None if it fails."""
+    try:
+        proc = subprocess.run(
+            [binary_path, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    for line in combined.splitlines():
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return None
+
+
+def detect_cli_inventory(
+    *,
+    which: Callable[[str], Optional[str]] = shutil.which,
+    probe_version: Callable[[str], Optional[str]] = _probe_cli_version,
+    specs: Sequence[Tuple[str, str, Tuple[str, ...]]] = CLI_SPECS,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Detect each of the six CLI agents (binary on PATH + version output) and return the inventory dict."""
+    clis: List[Dict[str, Any]] = []
+    for name, label, binaries in specs:
+        resolved_binary = binaries[0]
+        resolved_path: Optional[str] = None
+        for candidate in binaries:
+            found = which(candidate)
+            if found:
+                resolved_binary = candidate
+                resolved_path = found
+                break
+        version: Optional[str] = None
+        if resolved_path is not None:
+            version = probe_version(resolved_path)
+            if version is not None:
+                version = version.strip() or None
+        available = resolved_path is not None and version is not None
+        clis.append(
+            {
+                "name": name,
+                "label": label,
+                "binary": resolved_binary,
+                "available": available,
+                "version": version if available else None,
+                "path": resolved_path,
+            }
+        )
+    return {"clis": clis}
 
 
 def load_pipeline_config(path: str) -> Dict[str, Any]:
@@ -319,7 +399,17 @@ def runner_main(argv: Optional[list] = None) -> int:
         print(__version__)
         return EXIT_OK
 
-    # Not parser-enforced so --version works with no other flags
+    if args.list_clis:
+        payload = json.dumps(detect_cli_inventory(), indent=2)
+        if args.output:
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(payload, encoding='utf-8')
+        else:
+            print(payload)
+        return EXIT_OK
+
+    # Not parser-enforced so --version and --list-clis work with no other flags
     if not args.pipeline:
         print("Error: --pipeline is required", file=sys.stderr)
         return EXIT_USAGE

@@ -20,23 +20,27 @@ The runner image and its release CI live in `docker/` and
 """
 
 from .main import (
+    CLI_SPECS,
     EXIT_OK,
     EXIT_FAILED,
     EXIT_USAGE,
     RunnerUsageError,
     build_db_url_from_env,
     create_parser,
+    detect_cli_inventory,
     load_pipeline_config,
     runner_main,
 )
 
 __all__ = [
+    'CLI_SPECS',
     'EXIT_OK',
     'EXIT_FAILED',
     'EXIT_USAGE',
     'RunnerUsageError',
     'build_db_url_from_env',
     'create_parser',
+    'detect_cli_inventory',
     'load_pipeline_config',
     'runner_main',
 ]
