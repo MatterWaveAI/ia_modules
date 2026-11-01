@@ -21,14 +21,14 @@ Usage:
 
 from pathlib import Path
 
-# ia_modules' schema. Pass it to nexusql when using a DatabaseManager directly:
-#     await db.initialize(app_migration_paths=[str(MIGRATIONS_DIR)])
-MIGRATIONS_DIR = Path(__file__).parent / "migrations"
-
 from .interfaces import DatabaseInterface, DatabaseBackend
 from .factory import get_database, set_default_backend
 from .adapters.nexusql_adapter import NexuSQLAdapter
 from .adapters.sqlalchemy_adapter import SQLAlchemyAdapter
+
+# ia_modules' schema. Pass it to nexusql when using a DatabaseManager directly:
+#     await db.initialize(app_migration_paths=[str(MIGRATIONS_DIR)])
+MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 __all__ = [
     'MIGRATIONS_DIR',

@@ -26,6 +26,10 @@ from typing import Any, Dict, Optional
 from ia_modules.agents.subprocess_executor import (
     get_shared_executor,
 )
+# The environment readers live in the library, shared with the example pipelines;
+# here relative AGENT_CWD / AGENT_LOGS_DIR resolve against showcase_app/.
+from ia_modules.pipeline.llm_config import derive_mode, get_llm_config  # noqa: F401  (re-exported)
+from ia_modules.pipeline.llm_config import get_agent_config as _get_agent_config
 from ia_modules.pipeline.llm_step import LLMStep
 from ia_modules.pipeline.services import ServiceRegistry
 
@@ -33,12 +37,6 @@ logger = logging.getLogger(__name__)
 
 # Default project root (two levels up from this file: services/ -> backend/ -> showcase_app/)
 _DEFAULT_CWD = str(Path(__file__).resolve().parent.parent.parent)
-
-
-# The environment readers live in the library, shared with the example pipelines;
-# here relative AGENT_CWD / AGENT_LOGS_DIR resolve against showcase_app/.
-from ia_modules.pipeline.llm_config import derive_mode, get_llm_config  # noqa: F401  (re-exported)
-from ia_modules.pipeline.llm_config import get_agent_config as _get_agent_config
 
 
 def get_agent_config() -> Dict[str, Any]:

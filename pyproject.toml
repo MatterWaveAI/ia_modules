@@ -257,3 +257,17 @@ disable_error_code = [
     "has-type",
     "call-overload",
 ]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+# Errors only: pyflakes (F) and pycodestyle's E4/E7/E9, ruff's long-standing
+# defaults. ruff 0.17 widened its default set to style rules (pyupgrade,
+# bugbear, ...); adopting those is a separate, mechanical change.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# pytest.importorskip() has to run before the imports it guards
+"tests/**/*.py" = ["E402"]
+
