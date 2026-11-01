@@ -149,7 +149,7 @@ def _checkpoint_rows(thread_id):
     db = DatabaseManager(_TEST_DB_URL)
     db.connect()
     try:
-        return db.fetch_all(
+        return db.execute(
             "SELECT checkpoint_id, step_name, step_index "
             "FROM pipeline_checkpoints WHERE thread_id = :thread_id "
             "ORDER BY timestamp DESC",

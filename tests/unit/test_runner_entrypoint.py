@@ -372,7 +372,7 @@ class TestResumeFromCheckpoint:
         db = DatabaseManager(db_url)
         db.connect()
         try:
-            rows = db.fetch_all(
+            rows = db.execute(
                 "SELECT checkpoint_id FROM pipeline_checkpoints "
                 "WHERE thread_id = :thread_id",
                 {"thread_id": thread_id},
