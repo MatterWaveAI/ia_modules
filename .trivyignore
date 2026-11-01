@@ -1,0 +1,13 @@
+# Trivy waivers — findings accepted instead of fixed (T-060).
+#
+# Policy: an entry here means the finding was triaged, accepted, and is
+# re-reviewed each release. Every waiver carries the date it was accepted,
+# the reason, and a next-review date; drop the line once a fix ships
+# upstream. Nothing enters this file without all three.
+#
+# Format — one finding per line, with a comment line above it:
+#
+#   # accepted YYYY-MM-DD — <reason> — next review YYYY-MM-DD
+#   CVE-YYYY-NNNNN
+#
+# (Empty — no accepted findings.)
